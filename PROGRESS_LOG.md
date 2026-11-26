@@ -114,3 +114,20 @@
 - **Timestamp (UTC):** 2026-11-26T16:58:00Z
 - **Files Created/Updated:** `backend/app/config.py`, `backend/app/db/repository.py`, `backend/app/api/routes.py`, `backend/tests/test_repository.py`, `backend/tests/test_api_and_ws.py`, `frontend/src/utils/whaleEscalation.ts`, `frontend/src/store/useTerminalStore.ts`, `frontend/src/services/apiClient.ts`, `frontend/src/components/ControlDrawer.tsx`, `frontend/src/components/LegendDrawer.tsx`, `frontend/src/components/GuideDrawer.tsx`, `frontend/src/primitives/WhaleBubblesPrimitive.ts`, `frontend/src/components/UnifiedChart.tsx`, `frontend/src/App.tsx`, `frontend/src/styles/tokens.css`, `frontend/src/__tests__/whaleEscalation.test.ts`, `frontend/src/__tests__/primitives.test.ts`, `frontend/src/__tests__/shell.test.tsx`, `frontend/src/__tests__/store.test.ts`
 - **Notes for Downstream Agents:** Minimum whale threshold raised to `$250k`; `$100k` and `bar_delta` removed; fixed per-TF floors (`$250k`..`$10M`) + visible-candle density budget (`[6, 36]`) + `< 3.5px/bar` auto-hide; `LegendDrawer` sections start collapsed with triangles, shrink to `160px` rail while `ControlDrawer` collapses when `GuideDrawer` (`min(760px, 56vw)`) opens.
+
+
+## [STEP 5.1] — COMPLETE
+- **Subagent:** SA-OPS
+- **Timestamp (UTC):** 2026-11-26T17:30:00Z
+- **Skills Loaded:** None
+- **Files Created/Updated:** `backend/Dockerfile`, `.dockerignore`, `fly.toml`, `netlify.toml`, `.github/workflows/ci.yml`
+- **Verification Results:** `fly.toml` `primary_region = "fra"` verified; `ruff check .` -> exit 0; `mypy app` -> exit 0; `pytest -v` -> exit 0 (20 passed); `npx tsc --noEmit` -> exit 0; `npm run build` -> exit 0 (Docker CLI not installed locally; container build deferred to Fly/Docker host)
+- **Notes for Downstream Agents:** Fly.io config locks `fra`, `auto_stop_machines = "off"`, `min_machines_running = 1`, and `/data` volume; CI runs `backend`, `frontend`, and `smoke` jobs.
+
+## [STEP 5.2] — COMPLETE
+- **Subagent:** SA-OPS
+- **Timestamp (UTC):** 2026-11-26T17:30:00Z
+- **Skills Loaded:** `.agents/skills/institutional_anti_slop_ui_theme_tokens/skill_institutional_anti_slop_ui_theme_tokens.md`, `.agents/skills/lightweight_charts_v5_primitives/skill_lightweight_charts_v5_primitives.md`
+- **Files Created/Updated:** `frontend/src/__tests__/antiSlopAudit.test.ts`, `frontend/src/__tests__/node-shims.d.ts`, `scripts/smoke_e2e.py`, `README.md`
+- **Verification Results:** `ruff check . ../scripts/smoke_e2e.py` -> exit 0; `mypy app ../scripts/smoke_e2e.py` -> exit 0 (20 source files); `pytest -v` -> exit 0 (20 passed); `python scripts/smoke_e2e.py` -> exit 0 (0.14s); `npx tsc --noEmit` -> exit 0; `npx vitest run` -> exit 0 (30 passed across 7 files, including 4 anti-slop & LWC v5 audit tests); `npm run build` -> exit 0 (`dist/assets/index-B-zfWkIl.js` 466.99 kB)
+- **Notes for Downstream Agents:** All Phase 5 deployment, CI/CD, anti-slop CSS/LWC v5 audit, and full-stack REST + `/ws/btc` smoke gates pass cleanly.

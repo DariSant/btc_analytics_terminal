@@ -57,3 +57,12 @@ Each entry must record:
   - Updated `.agents/execution_plan/EXECUTION_PLAN.md`, `SUMMARY.md`, `SUBAGENTS.md`, `TODO.md`, and `skill_lightweight_charts_v5_primitives.md` to reflect the left-margin thermal strip and `LegendDrawer`.
 * **Rationale**: Delivers an uncluttered `60 FPS` institutional chart across all timeframes (`1m`–`1d`) and zoom levels while providing progressive disclosure documentation directly inside the terminal.
 * **Next Step**: Phase 5 (`Step 5.1`) — Dockerization, Fly.io (`fra`), Netlify config, CI pipeline, and E2E/anti-slop verification (`Step 5.2`).
+
+
+### 2026-11-26 18:31 (CET) — Phase 5 Deployment Topology, CI/CD & E2E / Anti-Slop Verification
+* **Category**: `DevOps / QA` / `Documentation`
+* **Change**:
+  - Completed Phase 5 (`Steps 5.1–5.2`) on `feat/phase-5-ops-qa`: added `backend/Dockerfile` (`python:3.12-slim`, non-root `appuser`, `/data`, `/api/v1/health` `HEALTHCHECK`), `.dockerignore`, `fly.toml` (`primary_region = "fra"`, `auto_stop_machines = "off"`, `min_machines_running = 1`, `/data` mount), `netlify.toml` (SPA fallback + security headers), and `.github/workflows/ci.yml` (`backend`, `frontend`, `smoke` jobs).
+  - Implemented `frontend/src/__tests__/antiSlopAudit.test.ts` (with `node-shims.d.ts` for strict `tsc` without `@types/node`), `scripts/smoke_e2e.py` (in-process REST + `/ws/btc` `set_timeframe` contract check), and updated `README.md` with local dev, verification, Fly.io (`--ha=false`), and Netlify runbooks.
+* **Rationale**: Completes all 5 phases of `EXECUTION_PLAN.md` with automated anti-slop, LWC v5 API, and end-to-end wire-contract verification (`20/20` pytest, `ruff`, `mypy`, `tsc`, `30/30` vitest, `vite build`, `smoke_e2e.py` all green).
+* **Next Step**: Merge `feat/phase-5-ops-qa` into `main` when ready and deploy to Fly.io (`fra`) + Netlify.
