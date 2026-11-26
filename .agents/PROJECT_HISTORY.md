@@ -39,3 +39,11 @@ Each entry must record:
   - Updated `.agents/AGENTS.md` (Section 8) to require automated gate verification and plain-language user verification guides at every milestone.
 * **Rationale**: Establishes a fully tested (`20/20` pytest, `ruff`, `mypy`, `tsc` clean) backend and contract baseline prior to Phase 3 frontend UI implementation.
 * **Next Step**: Phase 3 (`Step 3.1`) — 4-theme CSS token engine, client utilities (`timeSnap`, `vrvpCalc`), Zustand store, and REST/WS synchronization.
+
+### 2026-11-26 16:22 (CET) — Phase 3 Frontend Foundation, 4-Theme System & Institutional Shell
+* **Category**: `Frontend / UI`
+* **Change**:
+  - Completed Phase 3 (`Steps 3.1–3.2`): implemented `tokens.css` (4 themes: `oled-dark`, `midnight-navy`, `warm-off-white`, `pure-white`; `100vh × 100vw` overflow lock; `.font-mono-tabular`), `themeTokens.ts` (`readThemeTokens()` Canvas bridge), `timeSnap.ts`, `vrvpCalc.ts` (80-bin VRVP + `70%` Value Area), `formatters.ts`, `useTerminalStore.ts` (Zustand v5 with `1,500`-item caps), `apiClient.ts` (`AbortController`/sequence-guarded `TerminalSyncController`), and `wsClient.ts` (`1s`–`15s` reconnect + resync).
+  - Assembled the zero-scroll shell in `TopTelemetryBar.tsx` (`40px`), `ControlDrawer.tsx` (`260px` collapsible), `App.tsx`, and `main.tsx`, verified via `tsc --noEmit`, `vitest run` (`16/16` across 4 suites), `npm run build`, and an anti-slop token scan.
+* **Rationale**: Establishes the zero-slop UI chrome, deterministic client quant utilities, and live state/stream sync layer ready for Phase 4 Lightweight Charts v5 integration.
+* **Next Step**: Phase 4 (`Step 4.1`) — `UnifiedChart.tsx` Lightweight Charts v5.3+ core host, bottom `18%` volume pane, `ResizeObserver`, and imperative tick/theme sync.

@@ -59,3 +59,19 @@
 - **Files Created/Updated:** `backend/app/api/__init__.py`, `backend/app/api/ws_hub.py`, `backend/app/api/routes.py`, `backend/app/main.py`, `backend/app/connectors/binance.py`, `backend/app/engine/options_quant.py`, `backend/tests/test_api_and_ws.py`
 - **Verification Results:** `pytest -v` -> exit 0 (20 passed); `ruff check .` -> exit 0; `mypy app` -> exit 0
 - **Notes for Downstream Agents:** FastAPI exposes `/api/v1/health`, `/api/v1/klines`, `/api/v1/overlays/history`, `/api/v1/options`, and `/ws/btc` (`set_timeframe` routing + 4 Hz coalesced klines + immediate closed-candle flush).
+
+## [STEP 3.1] — COMPLETE
+- **Subagent:** SA-UI
+- **Timestamp (UTC):** 2026-11-26T14:49:25Z
+- **Skills Loaded:** `.agents/skills/institutional_anti_slop_ui_theme_tokens/skill_institutional_anti_slop_ui_theme_tokens.md`, `.agents/skills/derivatives_market_structure_quant_math/skill_derivatives_market_structure_quant_math.md`
+- **Files Created/Updated:** `frontend/src/styles/tokens.css`, `frontend/src/utils/themeTokens.ts`, `frontend/src/utils/timeSnap.ts`, `frontend/src/utils/vrvpCalc.ts`, `frontend/src/utils/formatters.ts`, `frontend/src/store/useTerminalStore.ts`, `frontend/src/services/apiClient.ts`, `frontend/src/services/wsClient.ts`, `frontend/src/vite-env.d.ts`, `frontend/src/__tests__/timeSnap.test.ts`, `frontend/src/__tests__/vrvpCalc.test.ts`, `frontend/src/__tests__/store.test.ts`
+- **Verification Results:** `npx tsc --noEmit` -> exit 0; `npx vitest run` -> exit 0 (14 passed across 3 files)
+- **Notes for Downstream Agents:** `useTerminalStore`, `readThemeTokens()`, `snapTimestampToBar()`, `computeVrvp()`, `TerminalSyncController`, and `TerminalWsClient` are exported cleanly for `SA-UI` Step 3.2 and `SA-CHART` Phase 4.
+
+## [STEP 3.2] — COMPLETE
+- **Subagent:** SA-UI
+- **Timestamp (UTC):** 2026-11-26T14:50:30Z
+- **Skills Loaded:** `.agents/skills/institutional_anti_slop_ui_theme_tokens/skill_institutional_anti_slop_ui_theme_tokens.md`
+- **Files Created/Updated:** `frontend/src/components/TopTelemetryBar.tsx`, `frontend/src/components/ControlDrawer.tsx`, `frontend/src/App.tsx`, `frontend/src/main.tsx`, `frontend/src/__tests__/shell.test.tsx`
+- **Verification Results:** `npx tsc --noEmit` -> exit 0; `npx vitest run` -> exit 0 (16 passed across 4 files); `npm run build` -> exit 0 (`dist/` built in 3.63s)
+- **Notes for Downstream Agents:** `App.tsx` hosts the `flex-1 min-w-0 h-full` chart slot inside `.terminal-workspace` (`calc(100vh - 40px)`) and wires `TerminalSyncController` + `TerminalWsClient` on mount; ready for `SA-CHART` Step 4.1 (`UnifiedChart.tsx`).
