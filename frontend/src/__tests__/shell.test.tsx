@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { ControlDrawer } from "../components/ControlDrawer";
+import { LegendDrawer } from "../components/LegendDrawer";
 import { TopTelemetryBar } from "../components/TopTelemetryBar";
 import { useTerminalStore } from "../store/useTerminalStore";
 
@@ -31,6 +32,7 @@ describe("Phase 3 Institutional Shell", () => {
       theme: "oled-dark",
       timeframe: "5m",
       drawerOpen: true,
+      legendOpen: false,
       layers: {
         volume: true,
         vrvp: true,
@@ -116,5 +118,30 @@ describe("Phase 3 Institutional Shell", () => {
 
     fireEvent.click(screen.getByRole("button", { name: /Collapse control drawer/i }));
     expect(drawer.style.width).toBe("0px");
+  });
+
+  it("keeps Legend pane hidden by default and toggles it open from the icon right of drawer toggle", () => {
+    render(
+      <>
+        <TopTelemetryBar onSelectTimeframe={vi.fn()} />
+        <ControlDrawer onSelectExpiry={vi.fn()} />
+        <LegendDrawer />
+      </>,
+    );
+
+    const legend = screen.getByLabelText("Chart Legend and Field Guide");
+    expect(legend.style.width).toBe("0px");
+    expect(useTerminalStore.getState().legendOpen).toBe(false);
+
+    const toggleBtn = screen.getByRole("button", { name: /Expand legend pane/i });
+    fireEvent.click(toggleBtn);
+    expect(useTerminalStore.getState().legendOpen).toBe(true);
+    expect(legend.style.width).toBe("260px");
+    expect(screen.getByText("Round Circles — Whale Trades")).toBeTruthy();
+    expect(screen.getByText("Diamond + X — Forced Liqs")).toBeTruthy();
+
+    fireEvent.click(screen.getByRole("button", { name: /Close legend pane/i }));
+    expect(useTerminalStore.getState().legendOpen).toBe(false);
+    expect(legend.style.width).toBe("0px");
   });
 });

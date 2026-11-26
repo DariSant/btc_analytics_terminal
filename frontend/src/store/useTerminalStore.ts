@@ -23,6 +23,7 @@ export interface TerminalStoreState {
   theme: ThemeId;
   timeframe: TimeframeLiteral;
   drawerOpen: boolean;
+  legendOpen: boolean;
   layers: LayerVisibilityState;
   selectedExpiry: string;
   minWhaleUsd: WhaleThresholdUsd;
@@ -43,6 +44,8 @@ export interface TerminalStoreState {
   setTimeframe: (timeframe: TimeframeLiteral) => void;
   toggleDrawer: () => void;
   setDrawerOpen: (open: boolean) => void;
+  toggleLegend: () => void;
+  setLegendOpen: (open: boolean) => void;
   toggleLayer: (layer: keyof LayerVisibilityState) => void;
   setSelectedExpiry: (expiry: string) => void;
   setMinWhaleUsd: (threshold: WhaleThresholdUsd) => void;
@@ -86,6 +89,7 @@ export const useTerminalStore = create<TerminalStoreState>((set, get) => ({
   theme: initialTheme,
   timeframe: "5m",
   drawerOpen: true,
+  legendOpen: false,
   layers: {
     volume: true,
     vrvp: true,
@@ -124,6 +128,14 @@ export const useTerminalStore = create<TerminalStoreState>((set, get) => ({
 
   setDrawerOpen: (open) => {
     set({ drawerOpen: open });
+  },
+
+  toggleLegend: () => {
+    set((state) => ({ legendOpen: !state.legendOpen }));
+  },
+
+  setLegendOpen: (open) => {
+    set({ legendOpen: open });
   },
 
   toggleLayer: (layer) => {

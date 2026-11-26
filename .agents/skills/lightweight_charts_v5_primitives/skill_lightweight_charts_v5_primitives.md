@@ -176,7 +176,7 @@ export abstract class BaseOverlayPrimitive implements ISeriesPrimitive<Time> {
 
 * **Crisp Horizontal Lines:** When drawing `1px` rays (`POC`, `VAH`, `VAL`, `Call Wall`, `Put Wall`, `Max Pain`), align Y to `const crispY = Math.floor(rawY) + 0.5;` with `ctx.lineWidth = 1;` so lines never blur across two physical rows.
 * **Recommended `zOrder`:**
-  * `'bottom'` for `VRVPPrimitive` and predictive bands in `LiquidationPrimitive` so candlesticks remain legible on top.
+  * `'bottom'` for `VRVPPrimitive` (flush right) and the `16px` left-docked thermal bar + tag-free intensity-scaled peak heat projections in `LiquidationPrimitive` so candlesticks remain legible on top (use Canvas 2D `ctx.createLinearGradient`—never CSS `linear-gradient`—and offset `OptionsWallsPrimitive` left GEX micro-bars right of `16px` when both are visible).
   * `'top'` for `WhaleBubblesPrimitive` and `OptionsWallsPrimitive` right-axis strike tags.
 
 ---
