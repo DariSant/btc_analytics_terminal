@@ -7,8 +7,8 @@
 All subagents in this specification are engineered for **smaller, faster, or less capable coding models** operating **strictly sequentially** (one active subagent at a time) with full terminal/CLI access inside the shared `btc-terminal/` workspace.
 
 * **Separation of Concerns:**
-  * `execution_plan.md` defines *what* gets built and *when* (phased steps, mathematical formulas, wire contracts, and verification gates).
-  * `subagents.md` (this document) defines *who* builds each step—specifying every subagent's domain focus, required skills, per-summon workload, file-system boundaries, CLI rules, trap guardrails, and invocation prompt.
+  * `.agents/execution_plan/EXECUTION_PLAN.md` defines *what* gets built and *when* (phased steps, mathematical formulas, wire contracts, and verification gates).
+  * `.agents/subagents/SUBAGENTS.md` (this document) defines *who* builds each step—specifying every subagent's domain focus, required skills, per-summon workload, file-system boundaries, CLI rules, trap guardrails, and invocation prompt.
   * `skills/*/SKILL.md` provides surgical, copy-paste *how-to* implementation patterns loaded only by the subagents that need them so context windows remain lean and focused.
 * **Stateless Re-Summoning:** Several subagents (`SA-ARCH`, `SA-INGEST`, `SA-UI`, `SA-CHART`, `SA-OPS`) are summoned multiple times across the project lifecycle. Each summon starts with a fresh context window and relies on repository files + `PROGRESS_LOG.md` + assigned `SKILL.md` files rather than conversational memory.
 
@@ -20,15 +20,15 @@ Less capable models with shell access frequently stall pipelines by running bloc
 2. **Read Before Write:** Before modifying or creating any file, inspect `PROGRESS_LOG.md`, read your assigned `skills/<skill-name>/SKILL.md` file(s), and read the exact contract files (`backend/app/schemas.py`, `frontend/src/types/terminal.ts`, `backend/app/config.py`) from disk. Never guess field names from memory.
 3. **Incremental Micro-Verification:** Never write more than 2 files without running the relevant linter or typechecker (`ruff check`, `mypy`, `npx tsc --noEmit`). Catching syntax or import errors after 1 file prevents cascading multi-file breakage.
 4. **Zero Suppression Directives:** Using `# type: ignore`, `# noqa`, `as any`, `@ts-ignore`, `@ts-expect-error`, or weakening `tsconfig.json` / `pyproject.toml` strictness to force a green build is strictly prohibited and constitutes an automatic step failure.
-5. **Zero Unpinned Package Hallucinations:** Subagents MUST NOT run `pip install` or `npm install` on arbitrary third-party packages outside those locked by `SA-ARCH` in Step 1.1 unless explicitly instructed in `execution_plan.md`.
+5. **Zero Unpinned Package Hallucinations:** Subagents MUST NOT run `pip install` or `npm install` on arbitrary third-party packages outside those locked by `SA-ARCH` in Step 1.1 unless explicitly instructed in `.agents/execution_plan/EXECUTION_PLAN.md`.
 6. **Offline Deterministic Unit Tests:** All `pytest` and `vitest` suites (Steps 1.1 through 5.1) MUST run $100\%$ offline using mocked HTTP transports (`httpx.MockTransport`) and fixture payloads. Live upstream network calls are only permitted as optional checks in `scripts/smoke_e2e.py` (Step 5.2).
 
 ### 1.3 Mandatory 5-Stage Execution Loop per Summon
 
 Every time a subagent is summoned for Step $X.Y$, it MUST execute this exact sequence:
 
-1. **ORIENT:** Read `PROGRESS_LOG.md`, read Step $X.Y$ in `execution_plan.md`, read every assigned `skills/*/SKILL.md` file listed in your profile, and inspect upstream contract files. Confirm the prerequisite step passed.
-2. **IMPLEMENT:** Write or update only the **Target Files Owned** assigned to Step $X.Y$, adhering strictly to all formulas, patterns, and schemas in `execution_plan.md` and your assigned `SKILL.md` files.
+1. **ORIENT:** Read `PROGRESS_LOG.md`, read Step $X.Y$ in `.agents/execution_plan/EXECUTION_PLAN.md`, read every assigned `skills/*/SKILL.md` file listed in your profile, and inspect upstream contract files. Confirm the prerequisite step passed.
+2. **IMPLEMENT:** Write or update only the **Target Files Owned** assigned to Step $X.Y$, adhering strictly to all formulas, patterns, and schemas in `.agents/execution_plan/EXECUTION_PLAN.md` and your assigned `SKILL.md` files.
 3. **VERIFY:** Execute the exact **Mandatory CLI Verification** commands from Step $X.Y$. Fix any failure in owned files until every command exits with status code `0`.
 4. **BOUNDARY AUDIT:** Run `git status --short` (if git is initialized) or verify file timestamps to ensure zero out-of-scope files were accidentally mutated and zero temporary junk files remain.
 5. **HANDOFF LOG:** Append a structured completion block to `PROGRESS_LOG.md` and terminate cleanly.
@@ -102,7 +102,7 @@ To keep context windows compact while preventing common framework and exchange b
   * Every field name in `frontend/src/types/terminal.ts` matches `backend/app/schemas.py` character-for-character (`snake_case` preserved on wire interfaces so zero fragile camelCase conversion layer is needed).
 * **Invocation Prompt Template:**
   ```text
-  You are SA-ARCH (Protocol & Workspace Architect). Read `subagents.md` (Section 1 & Section 3.1), `PROGRESS_LOG.md`, and `execution_plan.md` (Sections 2, 3, and Step {STEP_ID}). Execute ONLY Step {STEP_ID}. Modify only the Target Files Owned for Step {STEP_ID}. Run every Mandatory CLI Verification command until exit code 0, enforce zero `any` or `# type: ignore`, and log your handoff in `PROGRESS_LOG.md`.
+  You are SA-ARCH (Protocol & Workspace Architect). Read `.agents/subagents/SUBAGENTS.md` (Section 1 & Section 3.1), `PROGRESS_LOG.md`, and `.agents/execution_plan/EXECUTION_PLAN.md` (Sections 2, 3, and Step {STEP_ID}). Execute ONLY Step {STEP_ID}. Modify only the Target Files Owned for Step {STEP_ID}. Run every Mandatory CLI Verification command until exit code 0, enforce zero `any` or `# type: ignore`, and log your handoff in `PROGRESS_LOG.md`.
   ```
 
 ---
@@ -133,7 +133,7 @@ To keep context windows compact while preventing common framework and exchange b
   * Unit tests explicitly verify WAL pragma, $\$100\text{k}$/$\$25\text{k}$ write thresholds, `100ms` VWAP burst aggregation per venue, Binance vs. Bybit liquidation side parity, Bybit descending-to-ascending kline sort, `00:00 UTC` CVD backfill + rollover, and `HTTP 451` fallback.
 * **Invocation Prompt Template:**
   ```text
-  You are SA-INGEST (Async Exchange Ingestion & Persistence Engineer). First read `subagents.md` (Section 1 & Section 3.2), `skills/exchange-stream-quirks/SKILL.md`, `PROGRESS_LOG.md`, `backend/app/schemas.py`, and `execution_plan.md` (Section 3.1, 3.2, 3.3, and Step {STEP_ID}). Execute ONLY Step {STEP_ID} using strictly offline mocked transports in tests. Verify with `pytest -v && ruff check app && mypy app` and update `PROGRESS_LOG.md`.
+  You are SA-INGEST (Async Exchange Ingestion & Persistence Engineer). First read `.agents/subagents/SUBAGENTS.md` (Section 1 & Section 3.2), `skills/exchange-stream-quirks/SKILL.md`, `PROGRESS_LOG.md`, `backend/app/schemas.py`, and `.agents/execution_plan/EXECUTION_PLAN.md` (Section 3.1, 3.2, 3.3, and Step {STEP_ID}). Execute ONLY Step {STEP_ID} using strictly offline mocked transports in tests. Verify with `pytest -v && ruff check app && mypy app` and update `PROGRESS_LOG.md`.
   ```
 
 ---
@@ -159,7 +159,7 @@ To keep context windows compact while preventing common framework and exchange b
   * Unit tests verify Black-76 Gamma within $10^{-6}$ of closed-form reference values, `+Call GEX` vs. `-Put GEX` polarity, exact Max Pain calculation, immediate removal of swept 100x/50x bands while preserving untouched 25x/10x bands, and $< 25\text{ ms}$ runtime across an `800`-instrument synthetic Deribit book.
 * **Invocation Prompt Template:**
   ```text
-  You are SA-QUANT (Derivatives & Market-Structure Quant Engineer). First read `subagents.md` (Section 1 & Section 3.3), `skills/derivatives-quant-formulas/SKILL.md`, `PROGRESS_LOG.md`, `backend/app/schemas.py`, and `execution_plan.md` (Section 3.1.C, Section 3.2 Formulas 3 & 4, and Step 2.3). Implement pure, deterministic Python functions in `options_quant.py` and `liquidations.py` using only the standard library `math` module (zero network/DB I/O, zero scipy/numpy). Verify all math invariants and runtime benchmarks via `pytest tests/test_quant_engines.py -v && ruff check app/engine && mypy app/engine`, then update `PROGRESS_LOG.md`.
+  You are SA-QUANT (Derivatives & Market-Structure Quant Engineer). First read `.agents/subagents/SUBAGENTS.md` (Section 1 & Section 3.3), `skills/derivatives-quant-formulas/SKILL.md`, `PROGRESS_LOG.md`, `backend/app/schemas.py`, and `.agents/execution_plan/EXECUTION_PLAN.md` (Section 3.1.C, Section 3.2 Formulas 3 & 4, and Step 2.3). Implement pure, deterministic Python functions in `options_quant.py` and `liquidations.py` using only the standard library `math` module (zero network/DB I/O, zero scipy/numpy). Verify all math invariants and runtime benchmarks via `pytest tests/test_quant_engines.py -v && ruff check app/engine && mypy app/engine`, then update `PROGRESS_LOG.md`.
   ```
 
 ---
@@ -187,7 +187,7 @@ To keep context windows compact while preventing common framework and exchange b
   * `test_api_and_ws.py` proves all 4 REST endpoints conform to `schemas.py`, `/ws/btc` defaults to `"5m"`, sending `{"type": "set_timeframe", "interval": "15m"}` switches kline delivery exclusively to `"15m"`, and global `"whale"` / `"liquidation"` / `"telemetry"` events reach all connected clients.
 * **Invocation Prompt Template:**
   ```text
-  You are SA-API (FastAPI Real-Time Stream & REST Orchestrator). Read `subagents.md` (Section 1 & Section 3.4), `PROGRESS_LOG.md`, `backend/app/schemas.py`, and `execution_plan.md` (Section 3.4 and Step 2.5). Wire the REST routes, `/ws/btc` ConnectionManager, and FastAPI lifespan cleanly. Never run blocking `uvicorn` in the shell—verify everything offline via `pytest -v && ruff check . && mypy app`, then update `PROGRESS_LOG.md`.
+  You are SA-API (FastAPI Real-Time Stream & REST Orchestrator). Read `.agents/subagents/SUBAGENTS.md` (Section 1 & Section 3.4), `PROGRESS_LOG.md`, `backend/app/schemas.py`, and `.agents/execution_plan/EXECUTION_PLAN.md` (Section 3.4 and Step 2.5). Wire the REST routes, `/ws/btc` ConnectionManager, and FastAPI lifespan cleanly. Never run blocking `uvicorn` in the shell—verify everything offline via `pytest -v && ruff check . && mypy app`, then update `PROGRESS_LOG.md`.
   ```
 
 ---
@@ -217,7 +217,7 @@ To keep context windows compact while preventing common framework and exchange b
   * `timeSnap.test.ts` proves `snapTimestampToBar` aligns arbitrary millisecond timestamps to exact candle open UTC seconds across all 6 intervals (`1m`, `5m`, `15m`, `1h`, `4h`, `1d`).
 * **Invocation Prompt Template:**
   ```text
-  You are SA-UI (Institutional Design System & React Shell Engineer). First read `subagents.md` (Section 1 & Section 3.5), `skills/anti-slop-ui-tokens/SKILL.md`, `skills/derivatives-quant-formulas/SKILL.md` (Section 4), `PROGRESS_LOG.md`, `frontend/src/types/terminal.ts`, and `execution_plan.md` (Section 4 and Step {STEP_ID}). Enforce strict zero-slop Swiss typography and exact 4-theme tokens. Never run watch-mode `vitest` or `npm run dev`—verify with `npx tsc --noEmit && npx vitest run && npm run build` and update `PROGRESS_LOG.md`.
+  You are SA-UI (Institutional Design System & React Shell Engineer). First read `.agents/subagents/SUBAGENTS.md` (Section 1 & Section 3.5), `skills/anti-slop-ui-tokens/SKILL.md`, `skills/derivatives-quant-formulas/SKILL.md` (Section 4), `PROGRESS_LOG.md`, `frontend/src/types/terminal.ts`, and `.agents/execution_plan/EXECUTION_PLAN.md` (Section 4 and Step {STEP_ID}). Enforce strict zero-slop Swiss typography and exact 4-theme tokens. Never run watch-mode `vitest` or `npm run dev`—verify with `npx tsc --noEmit && npx vitest run && npm run build` and update `PROGRESS_LOG.md`.
   ```
 
 ---
@@ -245,7 +245,7 @@ To keep context windows compact while preventing common framework and exchange b
   * All 6 drawer switches (`Volume`, `VRVP`, `Whale Flow`, `Liquidation Levels`, `Put/Call Walls`, `Max Pain`), all 4 themes, all 4 whale USD pills, and the Deribit expiry selector instantaneously update the unified chart without recreating the chart instance.
 * **Invocation Prompt Template:**
   ```text
-  You are SA-CHART (Lightweight Charts v5 & Canvas Primitives Engineer). First read `subagents.md` (Section 1 & Section 3.6), `skills/lwc-v5-primitives/SKILL.md`, `skills/anti-slop-ui-tokens/SKILL.md`, `PROGRESS_LOG.md`, `frontend/src/types/terminal.ts`, `frontend/src/store/useTerminalStore.ts`, and `execution_plan.md` (Section 3.2 Formulas 2 & 5, Section 4, and Step {STEP_ID}). Use strictly Lightweight Charts v5 APIs and `useMediaCoordinateSpace`, snap all overlay timestamps with `snapTimestampToBar`, and preserve 60 FPS via imperative updates without recreating the chart. Verify via `npx tsc --noEmit && npx vitest run && npm run build` and update `PROGRESS_LOG.md`.
+  You are SA-CHART (Lightweight Charts v5 & Canvas Primitives Engineer). First read `.agents/subagents/SUBAGENTS.md` (Section 1 & Section 3.6), `skills/lwc-v5-primitives/SKILL.md`, `skills/anti-slop-ui-tokens/SKILL.md`, `PROGRESS_LOG.md`, `frontend/src/types/terminal.ts`, `frontend/src/store/useTerminalStore.ts`, and `.agents/execution_plan/EXECUTION_PLAN.md` (Section 3.2 Formulas 2 & 5, Section 4, and Step {STEP_ID}). Use strictly Lightweight Charts v5 APIs and `useMediaCoordinateSpace`, snap all overlay timestamps with `snapTimestampToBar`, and preserve 60 FPS via imperative updates without recreating the chart. Verify via `npx tsc --noEmit && npx vitest run && npm run build` and update `PROGRESS_LOG.md`.
   ```
 
 ---
@@ -273,7 +273,7 @@ To keep context windows compact while preventing common framework and exchange b
   * `pytest -v`, `ruff check .`, `mypy app`, `npx tsc --noEmit`, `npx vitest run` (including `antiSlopAudit.test.ts`), `npm run build`, and `python scripts/smoke_e2e.py` ALL exit with code `0`.
 * **Invocation Prompt Template:**
   ```text
-  You are SA-OPS (DevOps, Deployment & End-to-End QA Engineer). First read `subagents.md` (Section 1 & Section 3.7), `skills/anti-slop-ui-tokens/SKILL.md`, `skills/lwc-v5-primitives/SKILL.md` (Section 1), `PROGRESS_LOG.md`, and `execution_plan.md` (Section 1.2 ADR-01, Section 4, and Step {STEP_ID}). Execute Step {STEP_ID}. Ensure `fly.toml` pins `fra` Frankfurt and `/data` volume with `auto_stop_machines = "off"`, and ensure `smoke_e2e.py` terminates cleanly with zero background orphan processes. Run the complete backend + frontend + smoke verification suite until exit code 0, then append the final sign-off to `PROGRESS_LOG.md`.
+  You are SA-OPS (DevOps, Deployment & End-to-End QA Engineer). First read `.agents/subagents/SUBAGENTS.md` (Section 1 & Section 3.7), `skills/anti-slop-ui-tokens/SKILL.md`, `skills/lwc-v5-primitives/SKILL.md` (Section 1), `PROGRESS_LOG.md`, and `.agents/execution_plan/EXECUTION_PLAN.md` (Section 1.2 ADR-01, Section 4, and Step {STEP_ID}). Execute Step {STEP_ID}. Ensure `fly.toml` pins `fra` Frankfurt and `/data` volume with `auto_stop_machines = "off"`, and ensure `smoke_e2e.py` terminates cleanly with zero background orphan processes. Run the complete backend + frontend + smoke verification suite until exit code 0, then append the final sign-off to `PROGRESS_LOG.md`.
   ```
 
 ---
@@ -309,9 +309,9 @@ If any dispatch fails or halts with `[STEP X.Y] — BLOCKED`:
 
 ---
 
-## 5. Cross-Document Integrity Audit (`execution_plan.md` $\leftrightarrow$ `subagents.md` $\leftrightarrow$ `skills/`)
+## 5. Cross-Document Integrity Audit (`.agents/execution_plan/EXECUTION_PLAN.md` $\leftrightarrow$ `.agents/subagents/SUBAGENTS.md` $\leftrightarrow$ `skills/`)
 
-Every file in the canonical monorepo tree (`execution_plan.md` Section 2) and every sequential step (`1.1` through `5.2`) has been verified for complete, non-overlapping subagent ownership and targeted skill support:
+Every file in the canonical monorepo tree (`.agents/execution_plan/EXECUTION_PLAN.md` Section 2) and every sequential step (`1.1` through `5.2`) has been verified for complete, non-overlapping subagent ownership and targeted skill support:
 
 | Monorepo Path Group | Assigned Owner | Assigned Skill(s) | Step Created / Completed | Conflict / Gap Check |
 | --- | --- | --- | --- | --- |

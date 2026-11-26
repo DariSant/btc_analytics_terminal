@@ -1,0 +1,2359 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="oled">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>BTCUSDT — Market Structure & Order-Flow Terminal</title>
+
+  <!-- Tailwind CSS CDN for minimal structural utilities -->
+  <script src="https://cdn.tailwindcss.com"></script>
+
+  <!-- Institutional Typography: Inter (UI Labels) + JetBrains Mono (Tabular Numerics) -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link
+    href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500;600&display=swap"
+    rel="stylesheet"
+  />
+
+  <style>
+    /* ==========================================================================
+       === 1. THEME TOKENS (4-THEME INSTITUTIONAL PALETTE MATRIX) ===
+       Edit any hex or rgba token here to customize the terminal color system.
+       ========================================================================== */
+    :root,
+    html[data-theme="oled"] {
+      --bg: #09090B;
+      --surface: #111114;
+      --surface-hover: #18181D;
+      --border: #222227;
+      --text: #EDEDEF;
+      --muted: #71717A;
+      --bull: #2DD4BF;        /* Muted Teal */
+      --bear: #F43F5E;        /* Soft Rose */
+      --grid: rgba(34, 34, 39, 0.55);
+      --hud-bg: rgba(9, 9, 11, 0.86);
+    }
+
+    html[data-theme="navy"] {
+      --bg: #0B1221;
+      --surface: #111B2E;
+      --surface-hover: #17243D;
+      --border: #1E2D4A;
+      --text: #E2E8F0;
+      --muted: #64748B;
+      --bull: #34D399;        /* Sage Emerald */
+      --bear: #FB7185;        /* Muted Coral */
+      --grid: rgba(30, 45, 74, 0.55);
+      --hud-bg: rgba(11, 18, 33, 0.88);
+    }
+
+    html[data-theme="warm"] {
+      --bg: #F7F6F2;
+      --surface: #EFECE6;
+      --surface-hover: #E6E1D8;
+      --border: #DDD8CE;
+      --text: #1C1B18;
+      --muted: #78716C;
+      --bull: #0F766E;        /* Deep Pine */
+      --bear: #BE123C;        /* Oxblood */
+      --grid: rgba(221, 216, 206, 0.65);
+      --hud-bg: rgba(247, 246, 242, 0.90);
+    }
+
+    html[data-theme="white"] {
+      --bg: #FFFFFF;
+      --surface: #F8F9FA;
+      --surface-hover: #F1F3F5;
+      --border: #E5E7EB;
+      --text: #111827;
+      --muted: #6B7280;
+      --bull: #059669;        /* Crisp Forest */
+      --bear: #DC2626;        /* Editorial Red */
+      --grid: rgba(229, 231, 235, 0.75);
+      --hud-bg: rgba(255, 255, 255, 0.92);
+    }
+
+    /* ==========================================================================
+       === 2. LAYOUT DIMENSIONS & ANTI-SLOP STRUCTURAL RULES ===
+       Strict 100vw x 100vh lock, 1px hairline borders, max 2px border-radius,
+       zero shadows, zero blurs, zero gradients.
+       ========================================================================== */
+    :root {
+      --topbar-height: 40px;
+      --drawer-width: 260px;
+      --radius-sharp: 2px;
+      --font-ui: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      --font-mono: 'JetBrains Mono', monospace;
+    }
+
+    *,
+    *::before,
+    *::after {
+      box-sizing: border-box;
+      box-shadow: none !important;
+      text-shadow: none !important;
+      backdrop-filter: none !important;
+    }
+
+    html,
+    body {
+      margin: 0;
+      padding: 0;
+      width: 100vw;
+      height: 100vh;
+      overflow: hidden;
+      background-color: var(--bg);
+      color: var(--text);
+      font-family: var(--font-ui);
+      font-size: 11px;
+      line-height: 1.2;
+      -webkit-font-smoothing: antialiased;
+      user-select: none;
+    }
+
+    /* Mandatory tabular-nums for every numeric element so ticks never jitter */
+    .mono-num {
+      font-family: var(--font-mono);
+      font-variant-numeric: tabular-nums;
+      font-feature-settings: "tnum" 1, "zero" 1;
+    }
+
+    /* Root Single-Page Terminal Shell */
+    .terminal-shell {
+      display: flex;
+      flex-direction: column;
+      width: 100vw;
+      height: 100vh;
+      overflow: hidden;
+    }
+
+    /* Top Telemetry Strip (Exact 40px) */
+    .top-telemetry-bar {
+      height: var(--topbar-height);
+      min-height: var(--topbar-height);
+      max-height: var(--topbar-height);
+      width: 100%;
+      background-color: var(--surface);
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 10px;
+      gap: 8px;
+      overflow-x: auto;
+      scrollbar-width: none;
+    }
+    .top-telemetry-bar::-webkit-scrollbar {
+      display: none;
+    }
+
+    .hairline-divider-v {
+      width: 1px;
+      height: 18px;
+      background-color: var(--border);
+      flex-shrink: 0;
+    }
+
+    /* Main Workspace Row: Unified Chart + Collapsible Right Drawer */
+    .workspace-row {
+      display: flex;
+      width: 100vw;
+      height: calc(100vh - var(--topbar-height));
+      min-height: 0;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .chart-stage {
+      flex: 1;
+      min-width: 0;
+      height: 100%;
+      position: relative;
+      background-color: var(--bg);
+      cursor: crosshair;
+    }
+
+    #unifiedChartCanvas {
+      display: block;
+      width: 100%;
+      height: 100%;
+    }
+
+    /* Top-Left Single-Line Monospace Chart HUD */
+    .chart-hud {
+      position: absolute;
+      top: 8px;
+      left: 10px;
+      z-index: 10;
+      pointer-events: none;
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 10px;
+      padding: 4px 8px;
+      background-color: var(--hud-bg);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sharp);
+      font-size: 11px;
+    }
+
+    /* Right Collapsible Control Drawer (Exact 260px when open, 0px when collapsed) */
+    .control-drawer {
+      width: var(--drawer-width);
+      min-width: var(--drawer-width);
+      max-width: var(--drawer-width);
+      height: 100%;
+      background-color: var(--surface);
+      border-left: 1px solid var(--border);
+      display: flex;
+      flex-direction: column;
+      overflow-y: auto;
+      overflow-x: hidden;
+      scrollbar-width: thin;
+    }
+
+    .control-drawer.is-collapsed {
+      width: 0px;
+      min-width: 0px;
+      max-width: 0px;
+      border-left: none;
+      overflow: hidden;
+    }
+
+    /* Mobile / Compact Tablet Drawer Overlay Adaptation */
+    @media (max-width: 860px) {
+      .control-drawer {
+        position: absolute;
+        right: 0;
+        top: 0;
+        bottom: 0;
+        z-index: 30;
+      }
+    }
+
+    .drawer-section {
+      padding: 8px 10px;
+      border-bottom: 1px solid var(--border);
+      flex-shrink: 0;
+    }
+
+    .section-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      font-size: 10px;
+      font-weight: 600;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      color: var(--muted);
+      margin-bottom: 6px;
+    }
+
+    /* Minimalist Segmented Controls & Pills (Max 2px radius) */
+    .seg-group {
+      display: inline-flex;
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sharp);
+      background-color: var(--bg);
+      overflow: hidden;
+    }
+
+    .seg-btn {
+      background: transparent;
+      color: var(--muted);
+      border: none;
+      border-right: 1px solid var(--border);
+      padding: 3px 7px;
+      font-size: 10px;
+      font-weight: 500;
+      cursor: pointer;
+      border-radius: 0;
+      transition: background-color 80ms linear, color 80ms linear;
+      white-space: nowrap;
+    }
+    .seg-btn:last-child {
+      border-right: none;
+    }
+    .seg-btn:hover {
+      color: var(--text);
+      background-color: var(--surface-hover);
+    }
+    .seg-btn.is-active {
+      background-color: var(--text);
+      color: var(--bg);
+      font-weight: 600;
+    }
+
+    /* Action Pill Button */
+    .terminal-btn {
+      height: 22px;
+      padding: 0 8px;
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sharp);
+      background-color: var(--bg);
+      color: var(--muted);
+      font-size: 10px;
+      font-weight: 600;
+      letter-spacing: 0.04em;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      white-space: nowrap;
+    }
+    .terminal-btn:hover {
+      color: var(--text);
+      background-color: var(--surface-hover);
+    }
+    .terminal-btn.is-active {
+      border-color: var(--text);
+      color: var(--text);
+    }
+
+    /* Minimalist Rectangular Institutional Switch (Zero iOS Pill Bloat) */
+    .layer-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      height: 22px;
+      cursor: pointer;
+      padding: 0 2px;
+      border-radius: var(--radius-sharp);
+    }
+    .layer-row:hover {
+      background-color: var(--surface-hover);
+    }
+    .layer-label {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 11px;
+      color: var(--text);
+    }
+    .layer-swatch {
+      width: 7px;
+      height: 7px;
+      border-radius: 1px;
+      display: inline-block;
+    }
+    .rect-switch {
+      width: 24px;
+      height: 12px;
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sharp);
+      background-color: var(--bg);
+      position: relative;
+      flex-shrink: 0;
+    }
+    .rect-switch::after {
+      content: "";
+      position: absolute;
+      top: 1px;
+      left: 1px;
+      width: 8px;
+      height: 8px;
+      background-color: var(--muted);
+      border-radius: 1px;
+      transition: transform 90ms linear, background-color 90ms linear;
+    }
+    .layer-row[data-enabled="true"] .rect-switch {
+      border-color: var(--bull);
+    }
+    .layer-row[data-enabled="true"] .rect-switch::after {
+      transform: translateX(12px);
+      background-color: var(--bull);
+    }
+
+    /* Compact Liquidation Tier Chips */
+    .chip-grid {
+      display: grid;
+      grid-template-columns: repeat(5, 1fr);
+      gap: 4px;
+    }
+    .tier-chip {
+      height: 22px;
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sharp);
+      background-color: var(--bg);
+      color: var(--muted);
+      font-size: 10px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .tier-chip:hover {
+      color: var(--text);
+    }
+    .tier-chip.is-active {
+      border-color: var(--text);
+      color: var(--text);
+      background-color: var(--surface-hover);
+      font-weight: 600;
+    }
+
+    /* Deribit Options Expiry Rows */
+    .expiry-list {
+      display: flex;
+      flex-direction: column;
+      gap: 3px;
+    }
+    .expiry-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      height: 23px;
+      padding: 0 6px;
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sharp);
+      background-color: var(--bg);
+      cursor: pointer;
+      font-size: 10px;
+      color: var(--muted);
+    }
+    .expiry-row:hover {
+      background-color: var(--surface-hover);
+      color: var(--text);
+    }
+    .expiry-row.is-active {
+      border-color: var(--text);
+      color: var(--text);
+      background-color: var(--surface-hover);
+    }
+
+    /* Recent Whale & Liquidation Tape */
+    .tape-section {
+      padding: 8px 10px;
+      flex: 1;
+      min-height: 110px;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+    .tape-list {
+      display: flex;
+      flex-direction: column;
+      gap: 3px;
+      overflow: hidden;
+    }
+    .tape-item {
+      display: grid;
+      grid-template-columns: 48px 28px 1fr 56px 46px;
+      align-items: center;
+      gap: 4px;
+      height: 19px;
+      font-size: 10px;
+      border-bottom: 1px solid var(--border);
+      padding-bottom: 2px;
+    }
+
+    /* Semantic Text Utilities */
+    .text-bull { color: var(--bull); }
+    .text-bear { color: var(--bear); }
+    .text-muted-token { color: var(--muted); }
+    .status-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background-color: var(--bull);
+      display: inline-block;
+      flex-shrink: 0;
+    }
+    .status-dot.is-paused {
+      background-color: var(--muted);
+    }
+  </style>
+</head>
+
+<body>
+  <div class="terminal-shell">
+    <!-- ======================================================================
+         1. TOP TELEMETRY BAR (40px Exact Height)
+         ====================================================================== -->
+    <header class="top-telemetry-bar">
+      <!-- Left Cluster: Instrument & Live Mark Price -->
+      <div class="flex items-center gap-2.5 shrink-0">
+        <span id="liveDot" class="status-dot" title="WebSocket Stream Active"></span>
+        <div class="flex items-baseline gap-1.5">
+          <span class="font-semibold tracking-tight text-[12px]">BTCUSDT</span>
+          <span class="text-[9px] uppercase tracking-wider text-muted-token border border-[var(--border)] px-1 py-[1px] rounded-[2px]">PERP</span>
+        </div>
+        <span id="headerMarkPrice" class="mono-num font-semibold text-[13px] text-bull">$96,482.50</span>
+        <span id="headerChange24h" class="mono-num text-[11px] text-bull">+2.34%</span>
+      </div>
+
+      <!-- Center Cluster: Macro Derivatives Telemetry Strip -->
+      <div class="flex items-center gap-3 shrink-0">
+        <div class="hairline-divider-v"></div>
+
+        <!-- Funding Rate + Countdown -->
+        <div class="flex items-center gap-1.5">
+          <span class="text-[10px] uppercase tracking-wider text-muted-token">FUNDING</span>
+          <span id="headerFunding" class="mono-num text-[11px] text-bull">+0.0112%</span>
+          <span id="headerFundingTimer" class="mono-num text-[10px] text-muted-token">03:41:19</span>
+        </div>
+
+        <div class="hairline-divider-v"></div>
+
+        <!-- Aggregated Open Interest -->
+        <div class="flex items-center gap-1.5">
+          <span class="text-[10px] uppercase tracking-wider text-muted-token">OPEN INT</span>
+          <span id="headerOpenInterest" class="mono-num text-[11px]">$19.86B</span>
+          <span id="headerOiDelta" class="mono-num text-[10px] text-bull">+3.8%</span>
+        </div>
+
+        <div class="hairline-divider-v"></div>
+
+        <!-- 00:00 UTC Session Cumulative Volume Delta -->
+        <div class="flex items-center gap-1.5">
+          <span class="text-[10px] uppercase tracking-wider text-muted-token">SESSION CVD</span>
+          <span id="headerSessionCvd" class="mono-num text-[11px] font-medium text-bull">+$148.2M</span>
+        </div>
+
+        <div class="hairline-divider-v"></div>
+
+        <!-- Deribit Options Put/Call Ratio & Max Pain -->
+        <div class="flex items-center gap-1.5">
+          <span class="text-[10px] uppercase tracking-wider text-muted-token">P/C · MAX PAIN</span>
+          <span id="headerOptionsMetric" class="mono-num text-[11px]">0.67 · $95,000</span>
+        </div>
+
+        <div class="hairline-divider-v"></div>
+      </div>
+
+      <!-- Right Cluster: Timeframe, 4-Theme Matrix, Sim Pause & Drawer Toggle -->
+      <div class="flex items-center gap-2 shrink-0">
+        <!-- Timeframe Selector -->
+        <div id="timeframeGroup" class="seg-group mono-num" role="group" aria-label="Timeframe">
+          <button class="seg-btn" data-tf="1m">1m</button>
+          <button class="seg-btn is-active" data-tf="5m">5m</button>
+          <button class="seg-btn" data-tf="15m">15m</button>
+          <button class="seg-btn" data-tf="1h">1h</button>
+          <button class="seg-btn" data-tf="4h">4h</button>
+          <button class="seg-btn" data-tf="1d">1d</button>
+        </div>
+
+        <!-- 4-Theme Selector -->
+        <div id="themeGroup" class="seg-group" role="group" aria-label="Color Theme">
+          <button class="seg-btn is-active" data-theme-pick="oled">OLED</button>
+          <button class="seg-btn" data-theme-pick="navy">NAVY</button>
+          <button class="seg-btn" data-theme-pick="warm">WARM</button>
+          <button class="seg-btn" data-theme-pick="white">WHITE</button>
+        </div>
+
+        <!-- Live Simulation Toggle -->
+        <button id="simToggleBtn" class="terminal-btn is-active mono-num" title="Pause or Resume Simulated Feed">
+          <span id="simBtnText">LIVE</span>
+        </button>
+
+        <!-- Collapsible Right Drawer Toggle -->
+        <button id="drawerToggleBtn" class="terminal-btn is-active" title="Toggle Right Control Drawer">
+          CONTROLS
+        </button>
+      </div>
+    </header>
+
+    <!-- ======================================================================
+         2. MAIN WORKSPACE (Unified Chart Canvas + 260px Control Drawer)
+         ====================================================================== -->
+    <main class="workspace-row">
+      <!-- Unified Primary Chart Canvas -->
+      <section id="chartContainer" class="chart-stage">
+        <!-- Compact Single-Line Top-Left HUD -->
+        <div id="chartHud" class="chart-hud mono-num">
+          <span id="hudOhlcv">BTCUSDT · 5m · O 96,440.0  H 96,512.0  L 96,418.5  C 96,482.5  V $18.4M  Δ +$2.1M</span>
+          <span id="hudInspect" class="text-muted-token">Wheel: Zoom · Drag: Pan · Dbl-Click: Reset</span>
+        </div>
+
+        <canvas id="unifiedChartCanvas"></canvas>
+      </section>
+
+      <!-- Collapsible Right Control Drawer (260px) -->
+      <aside id="controlDrawer" class="control-drawer" aria-label="Overlay and Filter Controls">
+        <!-- Section 1: Overlay Layers -->
+        <div class="drawer-section">
+          <div class="section-header">
+            <span>OVERLAY LAYERS</span>
+            <span id="activeLayersCount" class="mono-num">6/6</span>
+          </div>
+
+          <div id="layerToggleList" class="flex flex-col gap-0.5">
+            <div class="layer-row" data-layer="volume" data-enabled="true">
+              <span class="layer-label">
+                <span class="layer-swatch" style="background: var(--muted);"></span>
+                Volume Histogram
+              </span>
+              <span class="rect-switch"></span>
+            </div>
+
+            <div class="layer-row" data-layer="vrvp" data-enabled="true">
+              <span class="layer-label">
+                <span class="layer-swatch" style="background: var(--text);"></span>
+                VRVP (POC / VA)
+              </span>
+              <span class="rect-switch"></span>
+            </div>
+
+            <div class="layer-row" data-layer="whales" data-enabled="true">
+              <span class="layer-label">
+                <span class="layer-swatch" style="background: var(--bull);"></span>
+                Whale Order Flow
+              </span>
+              <span class="rect-switch"></span>
+            </div>
+
+            <div class="layer-row" data-layer="liquidations" data-enabled="true">
+              <span class="layer-label">
+                <span class="layer-swatch" style="background: var(--bear);"></span>
+                Liquidation Levels
+              </span>
+              <span class="rect-switch"></span>
+            </div>
+
+            <div class="layer-row" data-layer="walls" data-enabled="true">
+              <span class="layer-label">
+                <span class="layer-swatch" style="border: 1px solid var(--bear);"></span>
+                Put / Call Walls
+              </span>
+              <span class="rect-switch"></span>
+            </div>
+
+            <div class="layer-row" data-layer="maxPain" data-enabled="true">
+              <span class="layer-label">
+                <span class="layer-swatch" style="border: 1px dashed var(--muted);"></span>
+                Max Pain Strike
+              </span>
+              <span class="rect-switch"></span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Section 2: Whale Order Flow Threshold -->
+        <div class="drawer-section">
+          <div class="section-header">
+            <span>WHALE FILTER (MIN USD)</span>
+            <span id="visibleWhaleBadge" class="mono-num text-[10px]">14 PRINTS</span>
+          </div>
+          <div id="whaleFilterGroup" class="seg-group w-full flex mono-num">
+            <button class="seg-btn flex-1" data-whale-min="100000">$100K</button>
+            <button class="seg-btn flex-1 is-active" data-whale-min="250000">$250K</button>
+            <button class="seg-btn flex-1" data-whale-min="500000">$500K</button>
+            <button class="seg-btn flex-1" data-whale-min="1000000">$1M</button>
+          </div>
+        </div>
+
+        <!-- Section 3: Liquidation Tiers -->
+        <div class="drawer-section">
+          <div class="section-header">
+            <span>LIQUIDATION TIERS</span>
+            <span id="activeLiqBandsBadge" class="mono-num text-[10px]">AUTO-MITIGATE</span>
+          </div>
+          <div id="liqTierGroup" class="chip-grid mono-num">
+            <button class="tier-chip is-active" data-liq-tier="100">100x</button>
+            <button class="tier-chip is-active" data-liq-tier="50">50x</button>
+            <button class="tier-chip is-active" data-liq-tier="25">25x</button>
+            <button class="tier-chip is-active" data-liq-tier="10">10x</button>
+            <button class="tier-chip is-active" data-liq-tier="realized" title="Realized Forced Orders >= $25K">REAL</button>
+          </div>
+        </div>
+
+        <!-- Section 4: Deribit Options Expiry Selector -->
+        <div class="drawer-section">
+          <div class="section-header">
+            <span>OPTIONS EXPIRY (DERIBIT)</span>
+            <span id="selectedGexRegime" class="mono-num text-bull">+GEX PIN</span>
+          </div>
+          <div id="expiryList" class="expiry-list mono-num">
+            <!-- Populated & updated dynamically from OPTIONS_SURFACES -->
+          </div>
+        </div>
+
+        <!-- Section 5: Recent Whale & Liquidation Tape -->
+        <div class="tape-section">
+          <div class="section-header">
+            <span>RECENT WHALE & LIQ TAPE</span>
+            <span class="mono-num text-[9px]">BIN · BYB</span>
+          </div>
+          <div id="liveTapeList" class="tape-list mono-num">
+            <!-- Populated dynamically with latest 6-8 prints -->
+          </div>
+        </div>
+      </aside>
+    </main>
+  </div>
+
+  <script>
+    /* ==========================================================================
+       === 3. MOCK MARKET DATA, CONFIG & STATE ENGINE ===
+       Tweak canvas geometry constants, options strikes, or volatility here.
+       ========================================================================== */
+    const TERMINAL_CONFIG = {
+      priceAxisWidth: 72,       // Right Y-axis gutter width (px)
+      timeAxisHeight: 24,       // Bottom X-axis gutter height (px)
+      volumePaneRatio: 0.18,    // Bottom 18% reserved for buy/sell volume split
+      vrvpBins: 64,             // Number of horizontal price bins for VRVP
+      vrvpMaxWidthRatio: 0.17,  // Max horizontal width of VRVP bars relative to plot
+      totalCandles: 210,        // Historical bars generated per timeframe
+      defaultVisibleBars: 88,   // Initial zoom level (bars on screen)
+      rightPaddingBars: 7,      // Breathing room to the right of live candle
+      baseMarkPrice: 96482.50,  // Starting BTCUSDT Perpetual Mark Price
+    };
+
+    const TIMEFRAME_SPECS = {
+      '1m':  { sec: 60,    stepVol: 48,   baseVolUsd: 6.5e6  },
+      '5m':  { sec: 300,   stepVol: 115,  baseVolUsd: 18.0e6 },
+      '15m': { sec: 900,   stepVol: 210,  baseVolUsd: 42.0e6 },
+      '1h':  { sec: 3600,  stepVol: 430,  baseVolUsd: 125.0e6 },
+      '4h':  { sec: 14400, stepVol: 890,  baseVolUsd: 390.0e6 },
+      '1d':  { sec: 86400, stepVol: 1750, baseVolUsd: 1.45e9 },
+    };
+
+    // Deribit BTC Options Surfaces per Expiry (Call/Put Walls, Black-76 Net GEX, Max Pain)
+    const OPTIONS_SURFACES = {
+      ALL: {
+        key: 'ALL',
+        label: 'ALL EXPIRIES',
+        oiShare: '100%',
+        pcRatio: 0.67,
+        maxPain: 95000,
+        netGexM: +62.4,
+        callWall: { strike: 98000, oiBtc: 4890, gexM: +54.2 },
+        putWall:  { strike: 94500, oiBtc: 4180, gexM: -38.6 },
+        ladder: [
+          { strike: 94000, gexM: -21.0 },
+          { strike: 94500, gexM: -38.6 },
+          { strike: 95000, gexM: +14.5 },
+          { strike: 96000, gexM: +29.8 },
+          { strike: 97000, gexM: +24.1 },
+          { strike: 98000, gexM: +54.2 },
+        ],
+      },
+      '27NOV26': {
+        key: '27NOV26',
+        label: '27 NOV 26',
+        oiShare: '18%',
+        pcRatio: 0.82,
+        maxPain: 96000,
+        netGexM: -24.1,
+        callWall: { strike: 97250, oiBtc: 1920, gexM: +28.4 },
+        putWall:  { strike: 95500, oiBtc: 1740, gexM: -34.8 },
+        ladder: [
+          { strike: 95000, gexM: -19.2 },
+          { strike: 95500, gexM: -34.8 },
+          { strike: 96000, gexM: -11.4 },
+          { strike: 96500, gexM: +8.2 },
+          { strike: 97250, gexM: +28.4 },
+        ],
+      },
+      '04DEC26': {
+        key: '04DEC26',
+        label: '04 DEC 26',
+        oiShare: '26%',
+        pcRatio: 0.71,
+        maxPain: 95500,
+        netGexM: +28.5,
+        callWall: { strike: 98500, oiBtc: 2740, gexM: +41.0 },
+        putWall:  { strike: 94000, oiBtc: 2310, gexM: -31.2 },
+        ladder: [
+          { strike: 94000, gexM: -31.2 },
+          { strike: 95000, gexM: -9.5 },
+          { strike: 96000, gexM: +18.0 },
+          { strike: 97500, gexM: +22.4 },
+          { strike: 98500, gexM: +41.0 },
+        ],
+      },
+      '25DEC26': {
+        key: '25DEC26',
+        label: '25 DEC 26',
+        oiShare: '56%',
+        pcRatio: 0.58,
+        maxPain: 95000,
+        netGexM: +74.8,
+        callWall: { strike: 99500, oiBtc: 6420, gexM: +78.5 },
+        putWall:  { strike: 93500, oiBtc: 4910, gexM: -46.0 },
+        ladder: [
+          { strike: 93500, gexM: -46.0 },
+          { strike: 95000, gexM: +22.0 },
+          { strike: 97000, gexM: +35.5 },
+          { strike: 98500, gexM: +44.1 },
+          { strike: 99500, gexM: +78.5 },
+        ],
+      },
+    };
+
+    // Central Reactive Terminal State
+    const state = {
+      theme: 'oled',
+      timeframe: '5m',
+      simRunning: true,
+      drawerOpen: true,
+      markPrice: TERMINAL_CONFIG.baseMarkPrice,
+      open24hPrice: TERMINAL_CONFIG.baseMarkPrice / 1.0234,
+      fundingCountdownSec: 3 * 3600 + 41 * 60 + 19,
+      sessionCvdUsd: 148.2e6,
+      openInterestUsd: 19.86e9,
+      selectedExpiry: 'ALL',
+      minWhaleUsd: 250000,
+      layers: {
+        volume: true,
+        vrvp: true,
+        whales: true,
+        liquidations: true,
+        walls: true,
+        maxPain: true,
+      },
+      liqTiers: {
+        100: true,
+        50: true,
+        25: true,
+        10: true,
+        realized: true,
+      },
+      candles: [],
+      whales: [],
+      realizedLiqs: [],
+      predictedBands: [],
+      tapeEvents: [],
+      // Viewport camera state
+      viewStart: 210 - TERMINAL_CONFIG.defaultVisibleBars + TERMINAL_CONFIG.rightPaddingBars,
+      viewCount: TERMINAL_CONFIG.defaultVisibleBars,
+      yScaleZoom: 1.0,
+      // Pointer & Crosshair state
+      pointer: {
+        active: false,
+        x: 0,
+        y: 0,
+        dragging: false,
+        dragAxis: false,
+        lastX: 0,
+        lastY: 0,
+        hoveredWhale: null,
+        hoveredLiq: null,
+      },
+      palette: null,
+    };
+
+    // Deterministic PRNG so timeframe switches generate repeatable, clean market structure
+    function createSeededRng(seed) {
+      let s = seed >>> 0;
+      return function () {
+        s = (s * 1664525 + 1013904223) >>> 0;
+        return s / 4294967296;
+      };
+    }
+
+    // Read active CSS custom properties into cached JS palette for 60 FPS Canvas drawing
+    function refreshPaletteCache() {
+      const style = getComputedStyle(document.documentElement);
+      const read = (prop, fallback) => style.getPropertyValue(prop).trim() || fallback;
+      state.palette = {
+        bg: read('--bg', '#09090B'),
+        surface: read('--surface', '#111114'),
+        border: read('--border', '#222227'),
+        text: read('--text', '#EDEDEF'),
+        muted: read('--muted', '#71717A'),
+        bull: read('--bull', '#2DD4BF'),
+        bear: read('--bear', '#F43F5E'),
+        grid: read('--grid', 'rgba(34,34,39,0.55)'),
+        hudBg: read('--hud-bg', 'rgba(9,9,11,0.86)'),
+      };
+    }
+
+    // Convert hex color (#RRGGBB) to rgba(r, g, b, alpha) for translucent Canvas fills
+    function hexToRgba(hex, alpha) {
+      const clean = hex.replace('#', '');
+      if (clean.length !== 6) return hex;
+      const r = parseInt(clean.slice(0, 2), 16);
+      const g = parseInt(clean.slice(2, 4), 16);
+      const b = parseInt(clean.slice(4, 6), 16);
+      return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+    }
+
+    // Formatters (all rendered inside .mono-num tabular-nums elements)
+    function fmtPrice(p) {
+      return p.toLocaleString('en-US', { minimumFractionDigits: 1, maximumFractionDigits: 1 });
+    }
+    function fmtPriceExact(p) {
+      return '$' + p.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    }
+    function fmtCompactUsd(val, signed = false) {
+      const abs = Math.abs(val);
+      const prefix = signed ? (val >= 0 ? '+$' : '-$') : '$';
+      if (abs >= 1e9) return prefix + (abs / 1e9).toFixed(2) + 'B';
+      if (abs >= 1e6) return prefix + (abs / 1e6).toFixed(1) + 'M';
+      if (abs >= 1e3) return prefix + Math.round(abs / 1e3) + 'K';
+      return prefix + abs.toFixed(0);
+    }
+    function fmtUtcClock(tsSec) {
+      const d = new Date(tsSec * 1000);
+      const hh = String(d.getUTCHours()).padStart(2, '0');
+      const mm = String(d.getUTCMinutes()).padStart(2, '0');
+      const ss = String(d.getUTCSeconds()).padStart(2, '0');
+      return `${hh}:${mm}:${ss}`;
+    }
+
+    /* ==========================================================================
+       MARKET SERIES GENERATOR (CANDLES, WHALE BUBBLES, SWING LIQ CLUSTERS)
+       ========================================================================== */
+    function generateMarketDataset(tf) {
+      const spec = TIMEFRAME_SPECS[tf];
+      const seedMap = { '1m': 101, '5m': 509, '15m': 1511, '1h': 3607, '4h': 14401, '1d': 86413 };
+      const rng = createSeededRng(seedMap[tf] || 509);
+      const N = TERMINAL_CONFIG.totalCandles;
+      const nowSec = Math.floor(Date.now() / 1000 / spec.sec) * spec.sec;
+
+      // Build relative path backwards so final bar closes smoothly at state.markPrice
+      const deltas = [];
+      for (let i = 0; i < N; i++) {
+        // Add subtle market wave cycles + occasional momentum bursts
+        const wave = Math.sin(i / 13) * 0.22 + Math.cos(i / 29) * 0.16;
+        const shock = rng() > 0.91 ? (rng() - 0.48) * 3.1 : (rng() - 0.5);
+        deltas.push((shock + wave * 0.35) * spec.stepVol);
+      }
+
+      const closes = new Array(N);
+      closes[N - 1] = state.markPrice;
+      for (let i = N - 2; i >= 0; i--) {
+        closes[i] = Math.max(42000, closes[i + 1] - deltas[i + 1]);
+      }
+
+      const candles = [];
+      const whales = [];
+      const realizedLiqs = [];
+
+      for (let i = 0; i < N; i++) {
+        const time = nowSec - (N - 1 - i) * spec.sec;
+        const open = i === 0 ? closes[0] - deltas[0] * 0.5 : closes[i - 1];
+        const close = closes[i];
+        const body = Math.abs(close - open);
+        const upperWick = (0.25 + rng() * 1.35) * (spec.stepVol * 0.55 + body * 0.3);
+        const lowerWick = (0.25 + rng() * 1.35) * (spec.stepVol * 0.55 + body * 0.3);
+        const high = Math.max(open, close) + upperWick;
+        const low = Math.min(open, close) - lowerWick;
+
+        // Volume surges on wide-range candles & wick rejections
+        const rangeMult = (high - low) / spec.stepVol;
+        const quoteUsd = spec.baseVolUsd * (0.45 + rng() * 0.85) * Math.max(0.6, rangeMult * 0.85);
+        const bullRatio = close >= open
+          ? 0.52 + Math.min(0.28, (body / (high - low + 0.01)) * 0.32)
+          : 0.48 - Math.min(0.28, (body / (high - low + 0.01)) * 0.32);
+        const takerBuyUsd = quoteUsd * bullRatio;
+
+        candles.push({
+          index: i,
+          time,
+          open,
+          high,
+          low,
+          close,
+          quoteUsd,
+          takerBuyUsd,
+          oiDeltaPct: (rng() - 0.44) * 0.018 * rangeMult,
+        });
+
+        // Emit multi-venue Whale Prints on high-energy bars (allowing 1-2 bubbles on major sweeps)
+        if (rng() > 0.72 || rangeMult > 1.85) {
+          const printsInBar = rangeMult > 2.2 && rng() > 0.5 ? 2 : 1;
+          for (let p = 0; p < printsInBar; p++) {
+            const side = rng() < bullRatio ? 'buy' : 'sell';
+            const venue = rng() > 0.42 ? 'BIN' : 'BYB';
+            const tierRoll = rng();
+            const notionalUsd = tierRoll > 0.90
+              ? 1020000 + rng() * 820000
+              : tierRoll > 0.64
+              ? 510000 + rng() * 460000
+              : tierRoll > 0.32
+              ? 255000 + rng() * 240000
+              : 105000 + rng() * 140000;
+            const execPrice = low + (high - low) * (0.18 + rng() * 0.64);
+
+            whales.push({
+              barIndex: i,
+              time: time + Math.floor(rng() * (spec.sec - 1)),
+              venue,
+              side,
+              price: execPrice,
+              notionalUsd,
+            });
+          }
+        }
+
+        // Realized Forced Liquidations (>= $25K) on sharp wick extensions
+        if (rangeMult > 1.65 && rng() > 0.58) {
+          const isLongLiq = lowerWick >= upperWick;
+          const venue = rng() > 0.48 ? 'BIN' : 'BYB';
+          const notionalUsd = 35000 + rng() * 390000;
+          const liqPrice = isLongLiq
+            ? low + lowerWick * 0.22
+            : high - upperWick * 0.22;
+
+          realizedLiqs.push({
+            barIndex: i,
+            time: time + Math.floor(rng() * (spec.sec - 1)),
+            venue,
+            side: isLongLiq ? 'long_liq' : 'short_liq',
+            price: liqPrice,
+            notionalUsd,
+          });
+        }
+      }
+
+      state.candles = candles;
+      state.whales = whales;
+      state.realizedLiqs = realizedLiqs;
+      state.predictedBands = computeUnmitigatedLiqBands(candles);
+
+      // Seed recent tape from latest generated whale + realized liquidation events
+      const combined = [
+        ...whales.slice(-8).map((w) => ({
+          tsSec: w.time,
+          venue: w.venue,
+          kind: w.side === 'buy' ? 'WHALE BUY' : 'WHALE SELL',
+          isBull: w.side === 'buy',
+          price: w.price,
+          notionalUsd: w.notionalUsd,
+        })),
+        ...realizedLiqs.slice(-5).map((l) => ({
+          tsSec: l.time,
+          venue: l.venue,
+          kind: l.side === 'short_liq' ? 'SHORT LIQ' : 'LONG LIQ',
+          isBull: l.side === 'short_liq',
+          price: l.price,
+          notionalUsd: l.notionalUsd,
+        })),
+      ]
+        .sort((a, b) => b.tsSec - a.tsSec)
+        .slice(0, 7);
+
+      state.tapeEvents = combined;
+
+      // Reset viewport cleanly to latest bars
+      state.viewCount = TERMINAL_CONFIG.defaultVisibleBars;
+      state.viewStart = candles.length - state.viewCount + TERMINAL_CONFIG.rightPaddingBars;
+      state.yScaleZoom = 1.0;
+
+      renderTapeList();
+      updateDrawerBadges();
+    }
+
+    // Compute OI-weighted 10x/25x/50x/100x isolated leverage bands & auto-clear swept pockets
+    function computeUnmitigatedLiqBands(candles) {
+      const rawBands = [];
+      const tiers = [
+        { lev: 100, dist: 0.0085 },
+        { lev: 50,  dist: 0.0175 },
+        { lev: 25,  dist: 0.0360 },
+        { lev: 10,  dist: 0.0880 },
+      ];
+
+      for (let i = 12; i < candles.length - 4; i++) {
+        const c = candles[i];
+        let isSwingHigh = true;
+        let isSwingLow = true;
+        let volSum = 0;
+
+        for (let k = i - 10; k <= i; k++) volSum += candles[k].quoteUsd;
+        const avgVol = volSum / 11;
+        if (c.quoteUsd < avgVol * 0.95) continue;
+
+        for (let j = i - 4; j <= i + 4; j++) {
+          if (candles[j].high > c.high) isSwingHigh = false;
+          if (candles[j].low < c.low) isSwingLow = false;
+        }
+
+        const oiWeight = 1 + Math.max(0, c.oiDeltaPct) * 28;
+
+        if (isSwingHigh) {
+          for (const t of tiers) {
+            const bandPrice = c.high * (1 + t.dist);
+            // Mandatory Auto-Mitigation: discard if any subsequent candle high swept through bandPrice
+            let mitigated = false;
+            for (let m = i + 1; m < candles.length; m++) {
+              if (candles[m].high >= bandPrice) {
+                mitigated = true;
+                break;
+              }
+            }
+            if (!mitigated) {
+              rawBands.push({
+                anchorIndex: i,
+                side: 'short_liq',
+                leverage: t.lev,
+                price: bandPrice,
+                estPoolM: Math.round((14 + (c.quoteUsd / avgVol) * 16 * oiWeight) * (110 / (t.lev + 35))),
+              });
+            }
+          }
+        }
+
+        if (isSwingLow) {
+          for (const t of tiers) {
+            const bandPrice = c.low * (1 - t.dist);
+            let mitigated = false;
+            for (let m = i + 1; m < candles.length; m++) {
+              if (candles[m].low <= bandPrice) {
+                mitigated = true;
+                break;
+              }
+            }
+            if (!mitigated) {
+              rawBands.push({
+                anchorIndex: i,
+                side: 'long_liq',
+                leverage: t.lev,
+                price: bandPrice,
+                estPoolM: Math.round((14 + (c.quoteUsd / avgVol) * 16 * oiWeight) * (110 / (t.lev + 35))),
+              });
+            }
+          }
+        }
+      }
+
+      // Deduplicate nearby bands of same side within 0.14% price proximity
+      rawBands.sort((a, b) => a.price - b.price);
+      const merged = [];
+      for (const b of rawBands) {
+        const prev = merged[merged.length - 1];
+        if (
+          prev &&
+          prev.side === b.side &&
+          prev.leverage === b.leverage &&
+          Math.abs(prev.price - b.price) / prev.price < 0.0014
+        ) {
+          prev.estPoolM = Math.min(95, prev.estPoolM + Math.round(b.estPoolM * 0.45));
+          prev.anchorIndex = Math.min(prev.anchorIndex, b.anchorIndex);
+        } else {
+          merged.push({ ...b });
+        }
+      }
+
+      const maxPool = Math.max(25, ...merged.map((m) => m.estPoolM));
+      return merged.map((m) => ({
+        ...m,
+        intensity: Math.min(1, Math.max(0.25, m.estPoolM / maxPool)),
+      }));
+    }
+
+    /* ==========================================================================
+       === 4. CANVAS OVERLAY RENDERERS (UNIFIED 60 FPS CHART ENGINE) ===
+       All 6 analytical overlays render onto one crisp HiDPI HTML5 Canvas.
+       ========================================================================== */
+    const canvas = document.getElementById('unifiedChartCanvas');
+    const chartContainer = document.getElementById('chartContainer');
+    const ctx = canvas.getContext('2d');
+
+    let cssWidth = 800;
+    let cssHeight = 600;
+    let frameRequested = false;
+
+    function crisp(px) {
+      return Math.floor(px) + 0.5;
+    }
+
+    function resizeCanvas() {
+      const rect = chartContainer.getBoundingClientRect();
+      cssWidth = Math.max(300, Math.floor(rect.width));
+      cssHeight = Math.max(240, Math.floor(rect.height));
+      const dpr = window.devicePixelRatio || 1;
+      canvas.width = Math.round(cssWidth * dpr);
+      canvas.height = Math.round(cssHeight * dpr);
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      requestRender();
+    }
+
+    function requestRender() {
+      if (!frameRequested) {
+        frameRequested = true;
+        requestAnimationFrame(() => {
+          frameRequested = false;
+          renderUnifiedChart();
+        });
+      }
+    }
+
+    // Compute active coordinate system for the current viewport
+    function computeViewportGeometry() {
+      const plotWidth = Math.max(120, cssWidth - TERMINAL_CONFIG.priceAxisWidth);
+      const plotHeight = Math.max(120, cssHeight - TERMINAL_CONFIG.timeAxisHeight);
+      const candles = state.candles;
+
+      const startIdx = Math.max(0, Math.floor(state.viewStart));
+      const endIdx = Math.min(candles.length - 1, Math.ceil(state.viewStart + state.viewCount));
+      const visibleCandles = candles.slice(startIdx, endIdx + 1);
+
+      let minP = Infinity;
+      let maxP = -Infinity;
+      let maxVol = 1;
+
+      for (const c of visibleCandles) {
+        if (c.low < minP) minP = c.low;
+        if (c.high > maxP) maxP = c.high;
+        if (c.quoteUsd > maxVol) maxVol = c.quoteUsd;
+      }
+
+      if (!Number.isFinite(minP) || !Number.isFinite(maxP)) {
+        minP = state.markPrice * 0.99;
+        maxP = state.markPrice * 1.01;
+      }
+
+      // Gently include nearby active Deribit walls if within 2.6% of visible price action
+      const opt = OPTIONS_SURFACES[state.selectedExpiry];
+      const midCandleP = (minP + maxP) * 0.5;
+      if (state.layers.walls) {
+        if (Math.abs(opt.callWall.strike - midCandleP) / midCandleP < 0.026) {
+          maxP = Math.max(maxP, opt.callWall.strike * 1.0015);
+        }
+        if (Math.abs(opt.putWall.strike - midCandleP) / midCandleP < 0.026) {
+          minP = Math.min(minP, opt.putWall.strike * 0.9985);
+        }
+      }
+      if (state.layers.maxPain && Math.abs(opt.maxPain - midCandleP) / midCandleP < 0.026) {
+        maxP = Math.max(maxP, opt.maxPain * 1.001);
+        minP = Math.min(minP, opt.maxPain * 0.999);
+      }
+
+      // Apply padding (top 7%, bottom 20% so bottom 18% volume histogram never collides with wicks)
+      const rawSpan = Math.max(20, (maxP - minP) * state.yScaleZoom);
+      const centerP = (maxP + minP) * 0.5;
+      const paddedTop = centerP + rawSpan * 0.58;
+      const paddedBottom = centerP - rawSpan * 0.72;
+      const totalSpan = paddedTop - paddedBottom;
+
+      const barStep = plotWidth / state.viewCount;
+
+      return {
+        plotWidth,
+        plotHeight,
+        visibleCandles,
+        startIdx,
+        endIdx,
+        minCandleLow: minP,
+        maxCandleHigh: maxP,
+        priceTop: paddedTop,
+        priceBottom: paddedBottom,
+        maxVol,
+        barStep,
+        indexToX: (idx) => ((idx - state.viewStart + 0.5) / state.viewCount) * plotWidth,
+        xToIndex: (x) => state.viewStart + (x / plotWidth) * state.viewCount,
+        priceToY: (p) => ((paddedTop - p) / totalSpan) * plotHeight,
+        yToPrice: (y) => paddedTop - (y / plotHeight) * totalSpan,
+      };
+    }
+
+    function renderUnifiedChart() {
+      if (!state.palette || state.candles.length === 0) return;
+      const pal = state.palette;
+      const vp = computeViewportGeometry();
+      const { plotWidth, plotHeight } = vp;
+
+      // Clear full canvas
+      ctx.fillStyle = pal.bg;
+      ctx.fillRect(0, 0, cssWidth, cssHeight);
+
+      // Clip to main plot region for chart layers
+      ctx.save();
+      ctx.beginPath();
+      ctx.rect(0, 0, plotWidth, plotHeight);
+      ctx.clip();
+
+      // 0. Subtle Institutional Grid
+      drawGridLines(vp, pal);
+
+      // Layer 4A: Estimated Liquidation Clusters (drawn beneath candles for clean contrast)
+      if (state.layers.liquidations) {
+        drawEstimatedLiquidationBands(vp, pal);
+      }
+
+      // Layer 2: Visible Range Volume Profile (VRVP docked on right edge of plot)
+      let vrvpSummary = null;
+      if (state.layers.vrvp && vp.visibleCandles.length > 0) {
+        vrvpSummary = drawVrvpOverlay(vp, pal);
+      }
+
+      // Layer 5 & 6: Deribit Put/Call Walls, Strike GEX Ladder & Max Pain
+      if (state.layers.walls || state.layers.maxPain) {
+        drawOptionsOverlays(vp, pal);
+      }
+
+      // Layer 1B: Bottom 18% Buy/Sell Split Volume Histogram
+      if (state.layers.volume) {
+        drawVolumeHistogram(vp, pal);
+      }
+
+      // Layer 1A: OHLC Candlesticks
+      drawCandlesticks(vp, pal);
+
+      // Layer 4B: Realized Forced Liquidation Diamonds
+      if (state.layers.liquidations && state.liqTiers.realized) {
+        drawRealizedLiquidations(vp, pal);
+      }
+
+      // Layer 3: Multi-Venue Whale Order Flow Bubbles
+      if (state.layers.whales) {
+        drawWhaleBubbles(vp, pal);
+      }
+
+      // Live Mark Price Dotted Ray across Plot
+      drawLivePriceLine(vp, pal);
+
+      // Crosshair Guide Lines inside Plot
+      if (state.pointer.active && state.pointer.x < plotWidth && state.pointer.y < plotHeight) {
+        drawCrosshairPlot(vp, pal);
+      }
+
+      ctx.restore();
+
+      // Axes Gutters (Right 72px Price Scale & Bottom 24px Time Scale)
+      drawAxesAndTags(vp, pal, vrvpSummary);
+
+      // Floating Minimalist Hit-Test Tooltip for Hovered Whale / Liq Marker
+      drawHoverTooltip(vp, pal);
+    }
+
+    // --- Grid Lines ---
+    function drawGridLines(vp, pal) {
+      ctx.strokeStyle = pal.grid;
+      ctx.lineWidth = 1;
+
+      const priceRange = vp.priceTop - vp.priceBottom;
+      const rawStep = priceRange / 7;
+      const mag = Math.pow(10, Math.floor(Math.log10(rawStep)));
+      const norm = rawStep / mag;
+      const step = (norm < 1.5 ? 1 : norm < 3 ? 2 : norm < 7 ? 5 : 10) * mag;
+
+      const firstPrice = Math.ceil(vp.priceBottom / step) * step;
+      ctx.beginPath();
+      for (let p = firstPrice; p <= vp.priceTop; p += step) {
+        const y = crisp(vp.priceToY(p));
+        ctx.moveTo(0, y);
+        ctx.lineTo(vp.plotWidth, y);
+      }
+
+      const barInterval = Math.max(6, Math.round(state.viewCount / 7));
+      const firstBar = Math.max(0, Math.floor(vp.startIdx / barInterval) * barInterval);
+      for (let i = firstBar; i <= vp.endIdx; i += barInterval) {
+        const x = crisp(vp.indexToX(i));
+        ctx.moveTo(x, 0);
+        ctx.lineTo(x, vp.plotHeight);
+      }
+      ctx.stroke();
+      vp.priceGridStep = step;
+      vp.barGridStep = barInterval;
+    }
+
+    // --- Layer 1B: Bottom 18% Volume Histogram (Taker Buy vs Taker Sell Split) ---
+    function drawVolumeHistogram(vp, pal) {
+      const maxH = vp.plotHeight * TERMINAL_CONFIG.volumePaneRatio;
+      const baseY = vp.plotHeight;
+      const barW = Math.max(1.5, Math.min(14, vp.barStep * 0.68));
+
+      for (const c of vp.visibleCandles) {
+        const x = vp.indexToX(c.index);
+        const totalH = (c.quoteUsd / vp.maxVol) * maxH;
+        const buyH = totalH * (c.takerBuyUsd / Math.max(1, c.quoteUsd));
+        const sellH = totalH - buyH;
+
+        ctx.fillStyle = hexToRgba(pal.bear, 0.26);
+        ctx.fillRect(x - barW * 0.5, baseY - totalH, barW, sellH);
+
+        ctx.fillStyle = hexToRgba(pal.bull, 0.30);
+        ctx.fillRect(x - barW * 0.5, baseY - buyH, barW, buyH);
+      }
+    }
+
+    // --- Layer 1A: Crisp OHLC Candlesticks ---
+    function drawCandlesticks(vp, pal) {
+      const bodyW = Math.max(2, Math.min(15, Math.floor(vp.barStep * 0.70)));
+
+      for (const c of vp.visibleCandles) {
+        const xCenter = crisp(vp.indexToX(c.index));
+        const yOpen = vp.priceToY(c.open);
+        const yClose = vp.priceToY(c.close);
+        const yHigh = vp.priceToY(c.high);
+        const yLow = vp.priceToY(c.low);
+        const isBull = c.close >= c.open;
+        const color = isBull ? pal.bull : pal.bear;
+
+        // High-Low Wick (1px hairline)
+        ctx.strokeStyle = color;
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.moveTo(xCenter, Math.floor(yHigh));
+        ctx.lineTo(xCenter, Math.ceil(yLow));
+        ctx.stroke();
+
+        // Candle Body
+        const top = Math.min(yOpen, yClose);
+        const height = Math.max(1.5, Math.abs(yClose - yOpen));
+        ctx.fillStyle = color;
+        ctx.fillRect(xCenter - bodyW * 0.5, top, bodyW, height);
+      }
+    }
+
+    // --- Layer 2: Visible Range Volume Profile (64 Bins + POC + 70% VAH/VAL) ---
+    function drawVrvpOverlay(vp, pal) {
+      const binsCount = TERMINAL_CONFIG.vrvpBins;
+      const lowBound = vp.minCandleLow;
+      const highBound = vp.maxCandleHigh;
+      const span = Math.max(1, highBound - lowBound);
+      const binSize = span / binsCount;
+
+      const bins = Array.from({ length: binsCount }, (_, idx) => ({
+        idx,
+        low: lowBound + idx * binSize,
+        high: lowBound + (idx + 1) * binSize,
+        mid: lowBound + (idx + 0.5) * binSize,
+        buyUsd: 0,
+        sellUsd: 0,
+        totalUsd: 0,
+      }));
+
+      let grandTotal = 0;
+      for (const c of vp.visibleCandles) {
+        const bStart = Math.max(0, Math.floor((c.low - lowBound) / binSize));
+        const bEnd = Math.min(binsCount - 1, Math.floor((c.high - lowBound) / binSize));
+        const count = Math.max(1, bEnd - bStart + 1);
+        const buyPart = c.takerBuyUsd / count;
+        const sellPart = Math.max(0, c.quoteUsd - c.takerBuyUsd) / count;
+
+        for (let b = bStart; b <= bEnd; b++) {
+          bins[b].buyUsd += buyPart;
+          bins[b].sellUsd += sellPart;
+          bins[b].totalUsd += buyPart + sellPart;
+          grandTotal += buyPart + sellPart;
+        }
+      }
+
+      // Locate Point of Control (POC)
+      let pocIdx = 0;
+      let maxBinVol = 1;
+      for (let i = 0; i < binsCount; i++) {
+        if (bins[i].totalUsd > maxBinVol) {
+          maxBinVol = bins[i].totalUsd;
+          pocIdx = i;
+        }
+      }
+
+      // Expand greedily from POC until 70% Value Area is captured
+      let valIdx = pocIdx;
+      let vahIdx = pocIdx;
+      let accVol = bins[pocIdx].totalUsd;
+      const targetVol = grandTotal * 0.70;
+
+      while (accVol < targetVol && (valIdx > 0 || vahIdx < binsCount - 1)) {
+        const downV = valIdx > 0 ? bins[valIdx - 1].totalUsd : -1;
+        const upV = vahIdx < binsCount - 1 ? bins[vahIdx + 1].totalUsd : -1;
+        if (upV >= downV && vahIdx < binsCount - 1) {
+          vahIdx++;
+          accVol += bins[vahIdx].totalUsd;
+        } else if (valIdx > 0) {
+          valIdx--;
+          accVol += bins[valIdx].totalUsd;
+        } else {
+          break;
+        }
+      }
+
+      const maxBarPx = Math.min(132, vp.plotWidth * TERMINAL_CONFIG.vrvpMaxWidthRatio);
+
+      for (let i = 0; i < binsCount; i++) {
+        const bin = bins[i];
+        if (bin.totalUsd <= 0) continue;
+        const yTop = vp.priceToY(bin.high);
+        const yBot = vp.priceToY(bin.low);
+        const rowH = Math.max(1, yBot - yTop - 0.6);
+        const totalW = (bin.totalUsd / maxBinVol) * maxBarPx;
+        const buyW = totalW * (bin.buyUsd / bin.totalUsd);
+        const sellW = totalW - buyW;
+        const inVa = i >= valIdx && i <= vahIdx;
+
+        // Docked cleanly against right plot border, growing leftward
+        ctx.fillStyle = hexToRgba(pal.bull, inVa ? 0.34 : 0.13);
+        ctx.fillRect(vp.plotWidth - totalW, yTop, buyW, rowH);
+
+        ctx.fillStyle = hexToRgba(pal.bear, inVa ? 0.34 : 0.13);
+        ctx.fillRect(vp.plotWidth - sellW, yTop, sellW, rowH);
+      }
+
+      const pocPrice = bins[pocIdx].mid;
+      const vahPrice = bins[vahIdx].high;
+      const valPrice = bins[valIdx].low;
+
+      // VAH & VAL 70% bounds across VRVP zone
+      ctx.save();
+      ctx.setLineDash([3, 3]);
+      ctx.strokeStyle = pal.muted;
+      ctx.lineWidth = 1;
+      for (const boundP of [vahPrice, valPrice]) {
+        const by = crisp(vp.priceToY(boundP));
+        ctx.beginPath();
+        ctx.moveTo(vp.plotWidth - maxBarPx - 24, by);
+        ctx.lineTo(vp.plotWidth, by);
+        ctx.stroke();
+      }
+      ctx.restore();
+
+      // Solid 1px POC ray + compact label
+      const pocY = crisp(vp.priceToY(pocPrice));
+      ctx.strokeStyle = hexToRgba(pal.text, 0.55);
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.moveTo(0, pocY);
+      ctx.lineTo(vp.plotWidth, pocY);
+      ctx.stroke();
+
+      ctx.font = "500 9px 'JetBrains Mono', monospace";
+      ctx.fillStyle = pal.text;
+      ctx.fillText(`POC ${fmtPrice(pocPrice)}`, vp.plotWidth - maxBarPx - 2, pocY - 4);
+      ctx.fillStyle = pal.muted;
+      ctx.fillText('VAH', vp.plotWidth - maxBarPx - 22, vp.priceToY(vahPrice) - 3);
+      ctx.fillText('VAL', vp.plotWidth - maxBarPx - 22, vp.priceToY(valPrice) + 9);
+
+      return { pocPrice, vahPrice, valPrice };
+    }
+
+    // --- Layer 3: Multi-Venue Whale Order Flow Bubbles ---
+    function drawWhaleBubbles(vp, pal) {
+      state.pointer.hoveredWhale = null;
+      let bestDist = Infinity;
+
+      for (const w of state.whales) {
+        if (w.notionalUsd < state.minWhaleUsd) continue;
+        if (w.barIndex < vp.startIdx - 2 || w.barIndex > vp.endIdx + 2) continue;
+
+        const x = vp.indexToX(w.barIndex);
+        const y = vp.priceToY(w.price);
+        if (y < -25 || y > vp.plotHeight + 25) continue;
+
+        // Circle area proportional to USD notional
+        const norm = Math.max(0, (w.notionalUsd - 100000) / 1750000);
+        const radius = Math.min(22, Math.max(4.5, 4.5 + 17.5 * Math.sqrt(norm)));
+        const color = w.side === 'buy' ? pal.bull : pal.bear;
+
+        ctx.save();
+        ctx.beginPath();
+        ctx.arc(x, y, radius, 0, Math.PI * 2);
+        ctx.fillStyle = hexToRgba(color, 0.23);
+        ctx.fill();
+
+        ctx.lineWidth = 1;
+        ctx.strokeStyle = hexToRgba(color, 0.92);
+        if (w.venue === 'BYB') {
+          ctx.setLineDash([2, 2]); // Subtle venue distinction: solid=BIN, micro-dash=BYB
+        }
+        ctx.stroke();
+        ctx.restore();
+
+        // Hit-test pointer hover
+        if (state.pointer.active) {
+          const dist = Math.hypot(state.pointer.x - x, state.pointer.y - y);
+          if (dist <= radius + 4 && dist < bestDist) {
+            bestDist = dist;
+            state.pointer.hoveredWhale = { ...w, x, y, radius };
+          }
+        }
+      }
+
+      // Highlight hovered whale ring cleanly
+      if (state.pointer.hoveredWhale) {
+        const hw = state.pointer.hoveredWhale;
+        ctx.strokeStyle = pal.text;
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.arc(hw.x, hw.y, hw.radius + 2.5, 0, Math.PI * 2);
+        ctx.stroke();
+      }
+    }
+
+    // --- Layer 4A: Predictive Leverage Liquidation Bands (10x/25x/50x/100x) ---
+    function drawEstimatedLiquidationBands(vp, pal) {
+      ctx.font = "500 9px 'JetBrains Mono', monospace";
+
+      for (const b of state.predictedBands) {
+        if (!state.liqTiers[b.leverage]) continue;
+        const y = vp.priceToY(b.price);
+        if (y < 4 || y > vp.plotHeight - 10) continue;
+
+        const xStart = Math.max(0, vp.indexToX(b.anchorIndex));
+        if (xStart >= vp.plotWidth) continue;
+
+        const isShortLiq = b.side === 'short_liq';
+        const bandColor = isShortLiq ? pal.bull : pal.bear;
+        const bandH = 4;
+
+        ctx.fillStyle = hexToRgba(bandColor, 0.08 + b.intensity * 0.22);
+        ctx.fillRect(xStart, y - bandH * 0.5, vp.plotWidth - xStart, bandH);
+
+        ctx.strokeStyle = hexToRgba(bandColor, 0.35 + b.intensity * 0.35);
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.moveTo(xStart, crisp(y));
+        ctx.lineTo(vp.plotWidth, crisp(y));
+        ctx.stroke();
+
+        const tag = `${b.leverage}x ${isShortLiq ? 'SHORT' : 'LONG'} LIQ · $${b.estPoolM}M`;
+        const textW = ctx.measureText(tag).width;
+        ctx.fillStyle = hexToRgba(bandColor, 0.88);
+        ctx.fillText(tag, Math.max(xStart + 4, vp.plotWidth - textW - 8), y - 4);
+      }
+    }
+
+    // --- Layer 4B: Realized Forced Liquidation Diamonds ---
+    function drawRealizedLiquidations(vp, pal) {
+      state.pointer.hoveredLiq = null;
+
+      for (const l of state.realizedLiqs) {
+        if (l.barIndex < vp.startIdx - 1 || l.barIndex > vp.endIdx + 1) continue;
+        const x = vp.indexToX(l.barIndex);
+        const y = vp.priceToY(l.price);
+        if (y < 0 || y > vp.plotHeight) continue;
+
+        const sz = Math.min(7.5, Math.max(4, 3.5 + Math.log10(l.notionalUsd / 20000) * 2.2));
+        const color = l.side === 'short_liq' ? pal.bull : pal.bear;
+
+        ctx.save();
+        ctx.beginPath();
+        ctx.moveTo(x, y - sz);
+        ctx.lineTo(x + sz, y);
+        ctx.lineTo(x, y + sz);
+        ctx.lineTo(x - sz, y);
+        ctx.closePath();
+        ctx.fillStyle = pal.bg;
+        ctx.fill();
+        ctx.lineWidth = 1.2;
+        ctx.strokeStyle = color;
+        ctx.stroke();
+        ctx.restore();
+
+        if (state.pointer.active && !state.pointer.hoveredWhale) {
+          if (Math.hypot(state.pointer.x - x, state.pointer.y - y) <= sz + 5) {
+            state.pointer.hoveredLiq = { ...l, x, y };
+          }
+        }
+      }
+    }
+
+    // --- Layers 5 & 6: Deribit Call/Put Walls, Left-Edge GEX Profile & Max Pain ---
+    function drawOptionsOverlays(vp, pal) {
+      const opt = OPTIONS_SURFACES[state.selectedExpiry];
+      ctx.font = "500 9.5px 'JetBrains Mono', monospace";
+
+      if (state.layers.walls) {
+        // Subtle left-docked Strike Net GEX micro-bars (max 42px)
+        const maxAbsGex = Math.max(10, ...opt.ladder.map((s) => Math.abs(s.gexM)));
+        for (const row of opt.ladder) {
+          const sy = vp.priceToY(row.strike);
+          if (sy < 6 || sy > vp.plotHeight - 6) continue;
+          const barLen = (Math.abs(row.gexM) / maxAbsGex) * 42;
+          const gColor = row.gexM >= 0 ? pal.bull : pal.bear;
+          ctx.fillStyle = hexToRgba(gColor, 0.32);
+          ctx.fillRect(0, sy - 2.5, barLen, 5);
+        }
+
+        // Call Wall (Overhead Resistance) & Put Wall (Downside Support)
+        const walls = [
+          {
+            kind: 'CALL WALL',
+            strike: opt.callWall.strike,
+            oi: opt.callWall.oiBtc,
+            gexM: opt.callWall.gexM,
+            color: pal.bear,
+          },
+          {
+            kind: 'PUT WALL',
+            strike: opt.putWall.strike,
+            oi: opt.putWall.oiBtc,
+            gexM: opt.putWall.gexM,
+            color: pal.bull,
+          },
+        ];
+
+        for (const w of walls) {
+          const rawY = vp.priceToY(w.strike);
+          const gexTxt = (w.gexM >= 0 ? '+$' : '-$') + Math.abs(w.gexM).toFixed(0) + 'M GEX';
+          const label = `${w.kind} $${w.strike.toLocaleString()} · ${w.oi.toLocaleString()} BTC · ${gexTxt}`;
+
+          if (rawY >= 8 && rawY <= vp.plotHeight - 8) {
+            const cy = crisp(rawY);
+            ctx.strokeStyle = w.color;
+            ctx.lineWidth = 1;
+            ctx.beginPath();
+            ctx.moveTo(0, cy);
+            ctx.lineTo(vp.plotWidth, cy);
+            ctx.stroke();
+
+            // Clean hairline label pill on left-center of ray
+            const tw = ctx.measureText(label).width + 10;
+            ctx.fillStyle = pal.surface;
+            ctx.fillRect(10, cy - 15, tw, 13);
+            ctx.strokeStyle = w.color;
+            ctx.strokeRect(crisp(10), crisp(cy - 15), Math.floor(tw), 13);
+            ctx.fillStyle = w.color;
+            ctx.fillText(label, 15, cy - 5);
+          } else {
+            // Pinned directional indicator when strike is outside zoomed Y-range
+            const isAbove = rawY < 8;
+            const pinY = isAbove ? 38 : vp.plotHeight - 20;
+            const arrow = isAbove ? '▲' : '▼';
+            const pinTxt = `${arrow} ${label}`;
+            const tw = ctx.measureText(pinTxt).width + 10;
+            ctx.fillStyle = pal.surface;
+            ctx.fillRect(10, pinY, tw, 15);
+            ctx.strokeStyle = pal.border;
+            ctx.strokeRect(crisp(10), crisp(pinY), Math.floor(tw), 15);
+            ctx.fillStyle = w.color;
+            ctx.fillText(pinTxt, 15, pinY + 11);
+          }
+        }
+      }
+
+      // Layer 6: Max Pain Dashed Ray
+      if (state.layers.maxPain) {
+        const mpY = vp.priceToY(opt.maxPain);
+        if (mpY >= 8 && mpY <= vp.plotHeight - 8) {
+          const cy = crisp(mpY);
+          ctx.save();
+          ctx.setLineDash([5, 4]);
+          ctx.strokeStyle = pal.muted;
+          ctx.lineWidth = 1;
+          ctx.beginPath();
+          ctx.moveTo(0, cy);
+          ctx.lineTo(vp.plotWidth, cy);
+          ctx.stroke();
+          ctx.restore();
+
+          const mpTag = `MAX PAIN $${opt.maxPain.toLocaleString()}`;
+          const tw = ctx.measureText(mpTag).width + 10;
+          ctx.fillStyle = pal.surface;
+          ctx.fillRect(10, cy + 3, tw, 13);
+          ctx.strokeStyle = pal.border;
+          ctx.strokeRect(crisp(10), crisp(cy + 3), Math.floor(tw), 13);
+          ctx.fillStyle = pal.muted;
+          ctx.fillText(mpTag, 15, cy + 12.5);
+        }
+      }
+    }
+
+    // --- Live Mark Price Dotted Line ---
+    function drawLivePriceLine(vp, pal) {
+      const lastBar = state.candles[state.candles.length - 1];
+      if (!lastBar) return;
+      const y = crisp(vp.priceToY(lastBar.close));
+      if (y < 0 || y > vp.plotHeight) return;
+
+      const color = lastBar.close >= lastBar.open ? pal.bull : pal.bear;
+      ctx.save();
+      ctx.setLineDash([2, 3]);
+      ctx.strokeStyle = hexToRgba(color, 0.75);
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.moveTo(0, y);
+      ctx.lineTo(vp.plotWidth, y);
+      ctx.stroke();
+      ctx.restore();
+    }
+
+    // --- Crosshair Plot Lines ---
+    function drawCrosshairPlot(vp, pal) {
+      const snapIdx = Math.round(vp.xToIndex(state.pointer.x));
+      const cx = snapIdx >= 0 && snapIdx < state.candles.length
+        ? crisp(vp.indexToX(snapIdx))
+        : crisp(state.pointer.x);
+      const cy = crisp(state.pointer.y);
+
+      ctx.save();
+      ctx.setLineDash([3, 3]);
+      ctx.strokeStyle = hexToRgba(pal.muted, 0.75);
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.moveTo(cx, 0);
+      ctx.lineTo(cx, vp.plotHeight);
+      ctx.moveTo(0, cy);
+      ctx.lineTo(vp.plotWidth, cy);
+      ctx.stroke();
+      ctx.restore();
+    }
+
+    // --- Right Price Scale (72px) & Bottom Time Scale (24px) ---
+    function drawAxesAndTags(vp, pal, vrvpSummary) {
+      const { plotWidth, plotHeight } = vp;
+
+      // Axis surfaces
+      ctx.fillStyle = pal.surface;
+      ctx.fillRect(plotWidth, 0, TERMINAL_CONFIG.priceAxisWidth, cssHeight);
+      ctx.fillRect(0, plotHeight, plotWidth, TERMINAL_CONFIG.timeAxisHeight);
+
+      // 1px Hairline Axis Borders
+      ctx.strokeStyle = pal.border;
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.moveTo(crisp(plotWidth), 0);
+      ctx.lineTo(crisp(plotWidth), cssHeight);
+      ctx.moveTo(0, crisp(plotHeight));
+      ctx.lineTo(cssWidth, crisp(plotHeight));
+      ctx.stroke();
+
+      ctx.font = "400 10px 'JetBrains Mono', monospace";
+      ctx.fillStyle = pal.muted;
+
+      // Price Scale Labels
+      const step = vp.priceGridStep || 200;
+      const firstP = Math.ceil(vp.priceBottom / step) * step;
+      for (let p = firstP; p <= vp.priceTop; p += step) {
+        const y = vp.priceToY(p);
+        if (y < 10 || y > plotHeight - 10) continue;
+        ctx.fillText(fmtPrice(p), plotWidth + 6, y + 3.5);
+      }
+
+      // Time Scale Labels
+      const barStep = vp.barGridStep || 10;
+      const firstBar = Math.max(0, Math.floor(vp.startIdx / barStep) * barStep);
+      const tfSec = TIMEFRAME_SPECS[state.timeframe].sec;
+
+      for (let i = firstBar; i <= vp.endIdx; i += barStep) {
+        const c = state.candles[i];
+        if (!c) continue;
+        const x = vp.indexToX(i);
+        if (x < 24 || x > plotWidth - 32) continue;
+        const d = new Date(c.time * 1000);
+        const label = tfSec >= 86400
+          ? `${String(d.getUTCDate()).padStart(2, '0')}/${String(d.getUTCMonth() + 1).padStart(2, '0')}`
+          : `${String(d.getUTCHours()).padStart(2, '0')}:${String(d.getUTCMinutes()).padStart(2, '0')}`;
+        ctx.fillText(label, x - 15, plotHeight + 15);
+      }
+
+      // Right-Axis Overlay Strike Tags (Call Wall, Put Wall, Max Pain, POC)
+      const opt = OPTIONS_SURFACES[state.selectedExpiry];
+      const axisPills = [];
+
+      if (state.layers.maxPain) {
+        axisPills.push({ price: opt.maxPain, bg: pal.bg, fg: pal.muted, border: pal.border });
+      }
+      if (vrvpSummary && state.layers.vrvp) {
+        axisPills.push({ price: vrvpSummary.pocPrice, bg: pal.bg, fg: pal.text, border: pal.muted });
+      }
+      if (state.layers.walls) {
+        axisPills.push({ price: opt.callWall.strike, bg: hexToRgba(pal.bear, 0.16), fg: pal.bear, border: pal.bear });
+        axisPills.push({ price: opt.putWall.strike,  bg: hexToRgba(pal.bull, 0.16), fg: pal.bull, border: pal.bull });
+      }
+
+      for (const pill of axisPills) {
+        const py = vp.priceToY(pill.price);
+        if (py < 8 || py > plotHeight - 8) continue;
+        drawRightAxisTag(plotWidth, py, fmtPrice(pill.price), pill.bg, pill.fg, pill.border);
+      }
+
+      // Live Mark Price Tag on Right Scale
+      const lastBar = state.candles[state.candles.length - 1];
+      if (lastBar) {
+        const my = vp.priceToY(lastBar.close);
+        if (my >= 6 && my <= plotHeight - 6) {
+          const isBull = lastBar.close >= lastBar.open;
+          const accent = isBull ? pal.bull : pal.bear;
+          drawRightAxisTag(plotWidth, my, fmtPrice(lastBar.close), accent, pal.bg, accent, true);
+        }
+      }
+
+      // Crosshair Axis Readout Pills (Y Price + X UTC Timestamp)
+      if (state.pointer.active && state.pointer.x < plotWidth && state.pointer.y < plotHeight) {
+        const hoverPrice = vp.yToPrice(state.pointer.y);
+        drawRightAxisTag(plotWidth, state.pointer.y, fmtPrice(hoverPrice), pal.text, pal.bg, pal.text, true);
+
+        const snapIdx = Math.max(0, Math.min(state.candles.length - 1, Math.round(vp.xToIndex(state.pointer.x))));
+        const bar = state.candles[snapIdx];
+        if (bar) {
+          const tx = Math.min(plotWidth - 36, Math.max(36, vp.indexToX(snapIdx)));
+          const timeStr = fmtUtcClock(bar.time).slice(0, 5) + ' UTC';
+          ctx.fillStyle = pal.text;
+          ctx.fillRect(tx - 34, plotHeight + 2, 68, 19);
+          ctx.fillStyle = pal.bg;
+          ctx.font = "600 9.5px 'JetBrains Mono', monospace";
+          ctx.fillText(timeStr, tx - 28, plotHeight + 14.5);
+        }
+      }
+    }
+
+    function drawRightAxisTag(axisX, centerY, text, bg, fg, borderColor, bold = false) {
+      const h = 16;
+      const top = Math.round(centerY - h * 0.5);
+      const w = TERMINAL_CONFIG.priceAxisWidth - 3;
+      ctx.fillStyle = bg;
+      ctx.fillRect(axisX + 1, top, w, h);
+      ctx.strokeStyle = borderColor;
+      ctx.lineWidth = 1;
+      ctx.strokeRect(crisp(axisX + 1), crisp(top), w, h);
+      ctx.fillStyle = fg;
+      ctx.font = `${bold ? 600 : 500} 9.5px 'JetBrains Mono', monospace`;
+      ctx.fillText(text, axisX + 5, top + 11.5);
+    }
+
+    // --- Minimalist Hairline Tooltip on Hovered Whale / Realized Liquidation ---
+    function drawHoverTooltip(vp, pal) {
+      const item = state.pointer.hoveredWhale || state.pointer.hoveredLiq;
+      if (!item) return;
+
+      const isWhale = Boolean(state.pointer.hoveredWhale);
+      const isBull = isWhale ? item.side === 'buy' : item.side === 'short_liq';
+      const title = isWhale
+        ? `${item.venue} WHALE ${item.side.toUpperCase()}`
+        : `${item.venue} ${item.side === 'short_liq' ? 'SHORT LIQ' : 'LONG LIQ'}`;
+      const detail = `${fmtCompactUsd(item.notionalUsd)} @ $${fmtPrice(item.price)} · ${fmtUtcClock(item.time)}`;
+
+      ctx.font = "600 10px 'JetBrains Mono', monospace";
+      const w = Math.max(ctx.measureText(title).width, ctx.measureText(detail).width) + 16;
+      const h = 34;
+      const boxX = Math.min(vp.plotWidth - w - 8, Math.max(8, item.x + 12));
+      const boxY = Math.max(38, Math.min(vp.plotHeight - h - 8, item.y - h - 8));
+
+      ctx.fillStyle = pal.surface;
+      ctx.fillRect(boxX, boxY, w, h);
+      ctx.strokeStyle = isBull ? pal.bull : pal.bear;
+      ctx.lineWidth = 1;
+      ctx.strokeRect(crisp(boxX), crisp(boxY), Math.floor(w), h);
+
+      ctx.fillStyle = isBull ? pal.bull : pal.bear;
+      ctx.fillText(title, boxX + 8, boxY + 13);
+      ctx.fillStyle = pal.text;
+      ctx.font = "400 9.5px 'JetBrains Mono', monospace";
+      ctx.fillText(detail, boxX + 8, boxY + 26);
+    }
+
+    /* ==========================================================================
+       === 5. HUD, DOM CONTROLS, INTERACTIONS & LIVE SIMULATION LOOP ===
+       ========================================================================== */
+    const hudOhlcvEl = document.getElementById('hudOhlcv');
+    const hudInspectEl = document.getElementById('hudInspect');
+
+    function updateTopLeftHud(vp) {
+      let targetBar = state.candles[state.candles.length - 1];
+      if (state.pointer.active && state.pointer.x < vp.plotWidth) {
+        const idx = Math.max(0, Math.min(state.candles.length - 1, Math.round(vp.xToIndex(state.pointer.x))));
+        targetBar = state.candles[idx] || targetBar;
+      }
+      if (!targetBar) return;
+
+      const deltaUsd = 2 * targetBar.takerBuyUsd - targetBar.quoteUsd;
+      hudOhlcvEl.textContent =
+        `BTCUSDT · ${state.timeframe} · O ${fmtPrice(targetBar.open)}  H ${fmtPrice(targetBar.high)}  ` +
+        `L ${fmtPrice(targetBar.low)}  C ${fmtPrice(targetBar.close)}  ` +
+        `V ${fmtCompactUsd(targetBar.quoteUsd)}  Δ ${fmtCompactUsd(deltaUsd, true)}`;
+
+      if (state.pointer.hoveredWhale) {
+        const w = state.pointer.hoveredWhale;
+        hudInspectEl.className = w.side === 'buy' ? 'text-bull' : 'text-bear';
+        hudInspectEl.textContent =
+          `[${w.venue} ${w.side.toUpperCase()} SWEEP: ${fmtCompactUsd(w.notionalUsd)} @ $${fmtPrice(w.price)}]`;
+      } else if (state.pointer.hoveredLiq) {
+        const l = state.pointer.hoveredLiq;
+        const bull = l.side === 'short_liq';
+        hudInspectEl.className = bull ? 'text-bull' : 'text-bear';
+        hudInspectEl.textContent =
+          `[${l.venue} ${bull ? 'SHORT' : 'LONG'} LIQ: ${fmtCompactUsd(l.notionalUsd)} @ $${fmtPrice(l.price)}]`;
+      } else {
+        hudInspectEl.className = 'text-muted-token';
+        hudInspectEl.textContent = 'Wheel: Zoom · Drag: Pan · Axis Drag: Scale Y · Dbl-Click: Reset';
+      }
+    }
+
+    function renderExpirySelector() {
+      const container = document.getElementById('expiryList');
+      container.innerHTML = '';
+
+      Object.values(OPTIONS_SURFACES).forEach((surf) => {
+        const row = document.createElement('div');
+        row.className = `expiry-row${state.selectedExpiry === surf.key ? ' is-active' : ''}`;
+        const gexPositive = surf.netGexM >= 0;
+        const gexLabel = `${gexPositive ? '+' : '-'}$${Math.abs(surf.netGexM).toFixed(0)}M GEX`;
+
+        row.innerHTML = `
+          <span class="font-medium">${surf.label}</span>
+          <div class="flex items-center gap-2">
+            <span class="text-muted-token">${surf.oiShare}</span>
+            <span class="${gexPositive ? 'text-bull' : 'text-bear'} font-semibold">${gexLabel}</span>
+          </div>
+        `;
+
+        row.addEventListener('click', () => {
+          state.selectedExpiry = surf.key;
+          renderExpirySelector();
+          syncHeaderTelemetry();
+          requestRender();
+        });
+        container.appendChild(row);
+      });
+
+      const activeSurf = OPTIONS_SURFACES[state.selectedExpiry];
+      const regimeEl = document.getElementById('selectedGexRegime');
+      if (activeSurf.netGexM >= 0) {
+        regimeEl.className = 'mono-num text-bull';
+        regimeEl.textContent = '+GEX STABILIZER';
+      } else {
+        regimeEl.className = 'mono-num text-bear';
+        regimeEl.textContent = '-GEX ACCELERATOR';
+      }
+    }
+
+    function renderTapeList() {
+      const listEl = document.getElementById('liveTapeList');
+      listEl.innerHTML = '';
+      state.tapeEvents.slice(0, 7).forEach((ev) => {
+        const item = document.createElement('div');
+        item.className = 'tape-item';
+        item.innerHTML = `
+          <span class="text-muted-token">${fmtUtcClock(ev.tsSec)}</span>
+          <span class="text-muted-token font-semibold">${ev.venue}</span>
+          <span class="${ev.isBull ? 'text-bull' : 'text-bear'} font-medium truncate">${ev.kind}</span>
+          <span class="text-right">${fmtPrice(ev.price)}</span>
+          <span class="text-right font-semibold ${ev.isBull ? 'text-bull' : 'text-bear'}">${fmtCompactUsd(ev.notionalUsd)}</span>
+        `;
+        listEl.appendChild(item);
+      });
+    }
+
+    function updateDrawerBadges() {
+      const enabledCount = Object.values(state.layers).filter(Boolean).length;
+      document.getElementById('activeLayersCount').textContent = `${enabledCount}/6`;
+
+      const visWhales = state.whales.filter((w) => w.notionalUsd >= state.minWhaleUsd).length;
+      document.getElementById('visibleWhaleBadge').textContent = `${visWhales} PRINTS`;
+
+      const activeBands = state.predictedBands.filter((b) => state.liqTiers[b.leverage]).length;
+      document.getElementById('activeLiqBandsBadge').textContent = `${activeBands} CLUSTERS`;
+    }
+
+    function syncHeaderTelemetry() {
+      const markEl = document.getElementById('headerMarkPrice');
+      const chgEl = document.getElementById('headerChange24h');
+      const cvdEl = document.getElementById('headerSessionCvd');
+      const optEl = document.getElementById('headerOptionsMetric');
+
+      const pct24h = ((state.markPrice - state.open24hPrice) / state.open24hPrice) * 100;
+      markEl.textContent = fmtPriceExact(state.markPrice);
+      chgEl.textContent = `${pct24h >= 0 ? '+' : ''}${pct24h.toFixed(2)}%`;
+      chgEl.className = `mono-num text-[11px] ${pct24h >= 0 ? 'text-bull' : 'text-bear'}`;
+
+      cvdEl.textContent = fmtCompactUsd(state.sessionCvdUsd, true);
+      cvdEl.className = `mono-num text-[11px] font-medium ${state.sessionCvdUsd >= 0 ? 'text-bull' : 'text-bear'}`;
+
+      const surf = OPTIONS_SURFACES[state.selectedExpiry];
+      optEl.textContent = `${surf.pcRatio.toFixed(2)} · $${surf.maxPain.toLocaleString()}`;
+    }
+
+    // Wire UI Event Listeners
+    function bindControls() {
+      // Timeframe Switcher
+      document.querySelectorAll('#timeframeGroup .seg-btn').forEach((btn) => {
+        btn.addEventListener('click', () => {
+          document.querySelectorAll('#timeframeGroup .seg-btn').forEach((b) => b.classList.remove('is-active'));
+          btn.classList.add('is-active');
+          state.timeframe = btn.dataset.tf;
+          generateMarketDataset(state.timeframe);
+          updateTopLeftHud(computeViewportGeometry());
+          requestRender();
+        });
+      });
+
+      // 4-Theme Matrix Switcher
+      document.querySelectorAll('#themeGroup .seg-btn').forEach((btn) => {
+        btn.addEventListener('click', () => {
+          document.querySelectorAll('#themeGroup .seg-btn').forEach((b) => b.classList.remove('is-active'));
+          btn.classList.add('is-active');
+          state.theme = btn.dataset.themePick;
+          document.documentElement.setAttribute('data-theme', state.theme);
+          refreshPaletteCache();
+          requestRender();
+        });
+      });
+
+      // Live Simulation Toggle
+      const simBtn = document.getElementById('simToggleBtn');
+      simBtn.addEventListener('click', () => {
+        state.simRunning = !state.simRunning;
+        simBtn.classList.toggle('is-active', state.simRunning);
+        document.getElementById('simBtnText').textContent = state.simRunning ? 'LIVE' : 'PAUSED';
+        document.getElementById('liveDot').classList.toggle('is-paused', !state.simRunning);
+      });
+
+      // Right Control Drawer Collapse/Expand
+      const drawerBtn = document.getElementById('drawerToggleBtn');
+      const drawerEl = document.getElementById('controlDrawer');
+      drawerBtn.addEventListener('click', () => {
+        state.drawerOpen = !state.drawerOpen;
+        drawerBtn.classList.toggle('is-active', state.drawerOpen);
+        drawerEl.classList.toggle('is-collapsed', !state.drawerOpen);
+        resizeCanvas();
+      });
+
+      // Layer Toggles
+      document.querySelectorAll('#layerToggleList .layer-row').forEach((row) => {
+        row.addEventListener('click', () => {
+          const key = row.dataset.layer;
+          state.layers[key] = !state.layers[key];
+          row.dataset.enabled = String(state.layers[key]);
+          updateDrawerBadges();
+          requestRender();
+        });
+      });
+
+      // Whale USD Filter
+      document.querySelectorAll('#whaleFilterGroup .seg-btn').forEach((btn) => {
+        btn.addEventListener('click', () => {
+          document.querySelectorAll('#whaleFilterGroup .seg-btn').forEach((b) => b.classList.remove('is-active'));
+          btn.classList.add('is-active');
+          state.minWhaleUsd = Number(btn.dataset.whaleMin);
+          updateDrawerBadges();
+          requestRender();
+        });
+      });
+
+      // Liquidation Tier Chips
+      document.querySelectorAll('#liqTierGroup .tier-chip').forEach((chip) => {
+        chip.addEventListener('click', () => {
+          const rawKey = chip.dataset.liqTier;
+          const key = rawKey === 'realized' ? 'realized' : Number(rawKey);
+          state.liqTiers[key] = !state.liqTiers[key];
+          chip.classList.toggle('is-active', state.liqTiers[key]);
+          updateDrawerBadges();
+          requestRender();
+        });
+      });
+
+      // Canvas Pointer & Wheel Interactions (Zoom, Pan, Y-Scale Drag, Reset)
+      canvas.addEventListener('mousemove', (e) => {
+        const rect = canvas.getBoundingClientRect();
+        const x = e.clientX - rect.left;
+        const y = e.clientY - rect.top;
+        state.pointer.active = true;
+        state.pointer.x = x;
+        state.pointer.y = y;
+
+        const plotW = cssWidth - TERMINAL_CONFIG.priceAxisWidth;
+        canvas.style.cursor = x > plotW ? 'ns-resize' : state.pointer.dragging ? 'grabbing' : 'crosshair';
+
+        if (state.pointer.dragging) {
+          if (state.pointer.dragAxis) {
+            const dy = y - state.pointer.lastY;
+            state.yScaleZoom = Math.min(2.6, Math.max(0.38, state.yScaleZoom * (1 + dy * 0.005)));
+          } else {
+            const dx = x - state.pointer.lastX;
+            const barShift = (dx / plotW) * state.viewCount;
+            state.viewStart = Math.max(
+              -10,
+              Math.min(state.candles.length - 12, state.viewStart - barShift)
+            );
+          }
+          state.pointer.lastX = x;
+          state.pointer.lastY = y;
+        }
+
+        renderUnifiedChart();
+        updateTopLeftHud(computeViewportGeometry());
+      });
+
+      canvas.addEventListener('mousedown', (e) => {
+        const rect = canvas.getBoundingClientRect();
+        const x = e.clientX - rect.left;
+        const y = e.clientY - rect.top;
+        state.pointer.dragging = true;
+        state.pointer.dragAxis = x > cssWidth - TERMINAL_CONFIG.priceAxisWidth;
+        state.pointer.lastX = x;
+        state.pointer.lastY = y;
+      });
+
+      window.addEventListener('mouseup', () => {
+        state.pointer.dragging = false;
+        state.pointer.dragAxis = false;
+      });
+
+      canvas.addEventListener('mouseleave', () => {
+        state.pointer.active = false;
+        state.pointer.hoveredWhale = null;
+        state.pointer.hoveredLiq = null;
+        requestRender();
+      });
+
+      canvas.addEventListener(
+        'wheel',
+        (e) => {
+          e.preventDefault();
+          const rect = canvas.getBoundingClientRect();
+          const mouseX = Math.min(cssWidth - TERMINAL_CONFIG.priceAxisWidth, Math.max(0, e.clientX - rect.left));
+          const vp = computeViewportGeometry();
+          const anchorBar = vp.xToIndex(mouseX);
+
+          const factor = e.deltaY > 0 ? 1.10 : 0.90;
+          const nextCount = Math.min(195, Math.max(22, state.viewCount * factor));
+          state.viewCount = nextCount;
+          state.viewStart = Math.max(
+            -10,
+            Math.min(state.candles.length - 12, anchorBar - (mouseX / vp.plotWidth) * nextCount)
+          );
+          requestRender();
+        },
+        { passive: false }
+      );
+
+      canvas.addEventListener('dblclick', () => {
+        state.viewCount = TERMINAL_CONFIG.defaultVisibleBars;
+        state.viewStart = state.candles.length - state.viewCount + TERMINAL_CONFIG.rightPaddingBars;
+        state.yScaleZoom = 1.0;
+        requestRender();
+      });
+
+      // Touch Pan Support for Mobile / Tablet
+      canvas.addEventListener('touchstart', (e) => {
+        if (e.touches.length === 1) {
+          const rect = canvas.getBoundingClientRect();
+          state.pointer.dragging = true;
+          state.pointer.lastX = e.touches[0].clientX - rect.left;
+          state.pointer.lastY = e.touches[0].clientY - rect.top;
+        }
+      }, { passive: true });
+
+      canvas.addEventListener('touchmove', (e) => {
+        if (state.pointer.dragging && e.touches.length === 1) {
+          const rect = canvas.getBoundingClientRect();
+          const x = e.touches[0].clientX - rect.left;
+          const plotW = Math.max(120, cssWidth - TERMINAL_CONFIG.priceAxisWidth);
+          const dx = x - state.pointer.lastX;
+          state.viewStart = Math.max(
+            -10,
+            Math.min(state.candles.length - 12, state.viewStart - (dx / plotW) * state.viewCount)
+          );
+          state.pointer.lastX = x;
+          requestRender();
+        }
+      }, { passive: true });
+
+      canvas.addEventListener('touchend', () => {
+        state.pointer.dragging = false;
+      });
+    }
+
+    // Live Simulated Exchange Tick Loop (Ticks Mark Price, Candles, Whales, CVD & Auto-Mitigation)
+    function startLiveSimulation() {
+      // 1-second Funding Countdown Timer
+      setInterval(() => {
+        if (state.fundingCountdownSec > 0) state.fundingCountdownSec--;
+        else state.fundingCountdownSec = 8 * 3600;
+        const h = String(Math.floor(state.fundingCountdownSec / 3600)).padStart(2, '0');
+        const m = String(Math.floor((state.fundingCountdownSec % 3600) / 60)).padStart(2, '0');
+        const s = String(state.fundingCountdownSec % 60).padStart(2, '0');
+        document.getElementById('headerFundingTimer').textContent = `${h}:${m}:${s}`;
+      }, 1000);
+
+      // 450ms Simulated Market Order-Flow Tick
+      setInterval(() => {
+        if (!state.simRunning || state.candles.length === 0) return;
+
+        const spec = TIMEFRAME_SPECS[state.timeframe];
+        const last = state.candles[state.candles.length - 1];
+        const shock = (Math.random() - 0.495) * (spec.stepVol * 0.16);
+        const nextPrice = Math.max(40000, last.close + shock);
+        const tradeUsd = (0.04 + Math.random() * 0.25) * 1e6;
+        const isBuy = shock >= 0;
+
+        last.close = nextPrice;
+        if (nextPrice > last.high) last.high = nextPrice;
+        if (nextPrice < last.low) last.low = nextPrice;
+        last.quoteUsd += tradeUsd;
+        if (isBuy) last.takerBuyUsd += tradeUsd;
+
+        state.markPrice = nextPrice;
+        state.sessionCvdUsd += isBuy ? tradeUsd : -tradeUsd;
+
+        const markEl = document.getElementById('headerMarkPrice');
+        markEl.className = `mono-num font-semibold text-[13px] ${isBuy ? 'text-bull' : 'text-bear'}`;
+
+        // Auto-Mitigate any Predictive Liquidation Band swept by live price
+        const beforeCount = state.predictedBands.length;
+        const sweptBands = [];
+        state.predictedBands = state.predictedBands.filter((b) => {
+          const swept =
+            (b.side === 'short_liq' && last.high >= b.price) ||
+            (b.side === 'long_liq' && last.low <= b.price);
+          if (swept) sweptBands.push(b);
+          return !swept;
+        });
+
+        if (sweptBands.length > 0 && beforeCount !== state.predictedBands.length) {
+          const sb = sweptBands[0];
+          const liqNotional = 85000 + Math.random() * 260000;
+          const nowSec = Math.floor(Date.now() / 1000);
+          state.realizedLiqs.push({
+            barIndex: last.index,
+            time: nowSec,
+            venue: Math.random() > 0.5 ? 'BIN' : 'BYB',
+            side: sb.side,
+            price: sb.price,
+            notionalUsd: liqNotional,
+          });
+          state.tapeEvents.unshift({
+            tsSec: nowSec,
+            venue: 'BIN',
+            kind: sb.side === 'short_liq' ? 'SHORT LIQ' : 'LONG LIQ',
+            isBull: sb.side === 'short_liq',
+            price: sb.price,
+            notionalUsd: liqNotional,
+          });
+          renderTapeList();
+          updateDrawerBadges();
+        }
+
+        // Occasional Live Whale Burst Print ($110K - $1.25M)
+        if (Math.random() > 0.91) {
+          const venue = Math.random() > 0.45 ? 'BIN' : 'BYB';
+          const side = isBuy ? 'buy' : 'sell';
+          const notionalUsd = Math.random() > 0.78
+            ? 520000 + Math.random() * 720000
+            : 115000 + Math.random() * 360000;
+          const nowSec = Math.floor(Date.now() / 1000);
+
+          state.whales.push({
+            barIndex: last.index,
+            time: nowSec,
+            venue,
+            side,
+            price: nextPrice,
+            notionalUsd,
+          });
+          state.sessionCvdUsd += side === 'buy' ? notionalUsd : -notionalUsd;
+          state.tapeEvents.unshift({
+            tsSec: nowSec,
+            venue,
+            kind: side === 'buy' ? 'WHALE BUY' : 'WHALE SELL',
+            isBull: side === 'buy',
+            price: nextPrice,
+            notionalUsd,
+          });
+          state.tapeEvents = state.tapeEvents.slice(0, 12);
+          renderTapeList();
+          updateDrawerBadges();
+        }
+
+        syncHeaderTelemetry();
+        if (!state.pointer.active) {
+          updateTopLeftHud(computeViewportGeometry());
+        }
+        requestRender();
+      }, 450);
+    }
+
+    // Boot Terminal Prototype on Window Load
+    window.onload = function () {
+      refreshPaletteCache();
+      renderExpirySelector();
+      generateMarketDataset(state.timeframe);
+      syncHeaderTelemetry();
+      bindControls();
+
+      const ro = new ResizeObserver(() => resizeCanvas());
+      ro.observe(chartContainer);
+      resizeCanvas();
+      updateTopLeftHud(computeViewportGeometry());
+      startLiveSimulation();
+    };
+  </script>
+</body>
+</html>

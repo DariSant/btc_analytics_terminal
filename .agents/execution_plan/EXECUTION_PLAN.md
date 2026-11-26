@@ -28,7 +28,7 @@ To prevent implementation ambiguity, all architectural trade-offs are locked pri
 ---
 
 ### 1.3 Subagent Roster Reference
-Subagents execute **strictly sequentially** (one agent active at a time with full CLI/shell access in the shared workspace). This execution plan **only assigns Subagent IDs to tasks**; each subagent's persona, core focus, technical skills, CLI tool boundaries, and operating discipline are defined separately in **`subagents.md`**.
+Subagents execute **strictly sequentially** (one agent active at a time with full CLI/shell access in the shared workspace). This execution plan **only assigns Subagent IDs to tasks**; each subagent's persona, core focus, technical skills, CLI tool boundaries, and operating discipline are defined separately in **`.agents/subagents/SUBAGENTS.md`**.
 
 | Subagent ID | Role Title | Summoned In Steps |
 | :--- | :--- | :--- |
@@ -308,7 +308,7 @@ Database file path: `/data/terminal.db` in production (`./data/terminal.db` loca
 ### PHASE 1: Workspace Foundation & Cross-Stack Contracts
 
 #### Step 1.1 — Monorepo Scaffolding & Strict Toolchains
-* **Assigned Subagent:** `SA-ARCH` *(capabilities & constraints defined in `subagents.md`)*
+* **Assigned Subagent:** `SA-ARCH` *(capabilities & constraints defined in `.agents/subagents/SUBAGENTS.md`)*
 * **Prerequisites:** Empty repository root.
 * **Target Files Owned:** `.gitignore`, `.env.example`, `PROGRESS_LOG.md`, `backend/pyproject.toml`, `backend/app/__init__.py`, `backend/app/config.py`, `frontend/package.json`, `frontend/tsconfig.json`, `frontend/vite.config.ts`, `frontend/index.html`.
 * **Step Goal:** Initialize reproducible Python 3.12 and React 19 + TypeScript + Vite + Tailwind v4 toolchains with strict static type checking and exact dependency versions.
@@ -349,7 +349,7 @@ Database file path: `/data/terminal.db` in production (`./data/terminal.db` loca
 ### PHASE 2: Resilient Python Ingestion, Quant Engine & Streaming API
 
 #### Step 2.1 — Async SQLite WAL Repository & Rolling Retention Worker
-* **Assigned Subagent:** `SA-INGEST` *(capabilities & constraints defined in `subagents.md`)*
+* **Assigned Subagent:** `SA-INGEST` *(capabilities & constraints defined in `.agents/subagents/SUBAGENTS.md`)*
 * **Prerequisites:** Step 1.2 passed.
 * **Target Files Owned:** `backend/app/db/__init__.py`, `backend/app/db/repository.py`, `backend/tests/test_repository.py`.
 * **Step Goal:** Build a non-blocking async SQLite storage layer with queued batch writes and automated 14-day retention pruning.
@@ -392,7 +392,7 @@ Database file path: `/data/terminal.db` in production (`./data/terminal.db` loca
 ---
 
 #### Step 2.3 — Black-76 Options Quant Engine & Self-Mitigating Liquidation Clusters
-* **Assigned Subagent:** `SA-QUANT` *(capabilities & constraints defined in `subagents.md`)*
+* **Assigned Subagent:** `SA-QUANT` *(capabilities & constraints defined in `.agents/subagents/SUBAGENTS.md`)*
 * **Prerequisites:** Step 2.2 passed.
 * **Target Files Owned:** `backend/app/engine/options_quant.py`, `backend/app/engine/liquidations.py`, `backend/tests/test_quant_engines.py`.
 * **Step Goal:** Implement pure, deterministic mathematical engines for Deribit Black-76 GEX/Walls/Max Pain and auto-mitigated OI-weighted predictive liquidation bands.
@@ -436,7 +436,7 @@ Database file path: `/data/terminal.db` in production (`./data/terminal.db` loca
 ---
 
 #### Step 2.5 — FastAPI Lifecycle, REST Backfill & Multiplexed `/ws/btc` Hub
-* **Assigned Subagent:** `SA-API` *(capabilities & constraints defined in `subagents.md`)*
+* **Assigned Subagent:** `SA-API` *(capabilities & constraints defined in `.agents/subagents/SUBAGENTS.md`)*
 * **Prerequisites:** Step 2.4 passed.
 * **Target Files Owned:** `backend/app/api/__init__.py`, `backend/app/api/ws_hub.py`, `backend/app/api/routes.py`, `backend/app/main.py`, `backend/tests/test_api_and_ws.py`.
 * **Step Goal:** Expose low-latency REST backfill endpoints and a backpressure-safe multiplexed `/ws/btc` broadcaster supporting per-client `set_timeframe` subscriptions.
@@ -460,7 +460,7 @@ Database file path: `/data/terminal.db` in production (`./data/terminal.db` loca
 ### PHASE 3: Frontend Foundation, State Sync & Institutional Shell
 
 #### Step 3.1 — 4-Theme Token Engine, Utilities, Zustand Store & WS/REST Sync
-* **Assigned Subagent:** `SA-UI` *(capabilities & constraints defined in `subagents.md`)*
+* **Assigned Subagent:** `SA-UI` *(capabilities & constraints defined in `.agents/subagents/SUBAGENTS.md`)*
 * **Prerequisites:** Step 2.5 passed.
 * **Target Files Owned:** `frontend/src/styles/tokens.css`, `frontend/src/utils/formatters.ts`, `frontend/src/utils/timeSnap.ts`, `frontend/src/utils/vrvpCalc.ts`, `frontend/src/store/useTerminalStore.ts`, `frontend/src/services/apiClient.ts`, `frontend/src/services/wsClient.ts`, `frontend/src/__tests__/timeSnap.test.ts`, `frontend/src/__tests__/vrvpCalc.test.ts`, `frontend/src/__tests__/store.test.ts`.
 * **Step Goal:** Build the deterministic client state layer, 4-theme CSS custom property foundation, coordinate time-snapping math, 80-bin VRVP calculator, and resilient backend synchronization.
@@ -510,7 +510,7 @@ Database file path: `/data/terminal.db` in production (`./data/terminal.db` loca
 ### PHASE 4: Unified Lightweight Charts v5 Host & Custom Canvas Primitives
 
 #### Step 4.1 — Lightweight Charts v5.3+ Core Host, Volume Split & Live Sync
-* **Assigned Subagent:** `SA-CHART` *(capabilities & constraints defined in `subagents.md`)*
+* **Assigned Subagent:** `SA-CHART` *(capabilities & constraints defined in `.agents/subagents/SUBAGENTS.md`)*
 * **Prerequisites:** Step 3.2 passed.
 * **Target Files Owned:** `frontend/src/components/UnifiedChart.tsx` *( mounted into `frontend/src/App.tsx`)*.
 * **Step Goal:** Instantiate the unified TradingView Lightweight Charts v5.3+ canvas using strictly v5 APIs, synchronize theme tokens and resize events, and render incremental `60 FPS` candles + bottom-docked volume bars.
@@ -584,7 +584,7 @@ Database file path: `/data/terminal.db` in production (`./data/terminal.db` loca
 ### PHASE 5: Deployment Topology, CI/CD & End-to-End Verification
 
 #### Step 5.1 — Dockerization, Fly.io (`fra`) Config, Netlify Config & CI Pipeline
-* **Assigned Subagent:** `SA-OPS` *(capabilities & constraints defined in `subagents.md`)*
+* **Assigned Subagent:** `SA-OPS` *(capabilities & constraints defined in `.agents/subagents/SUBAGENTS.md`)*
 * **Prerequisites:** Step 4.3 passed.
 * **Target Files Owned:** `backend/Dockerfile`, `.dockerignore`, `fly.toml`, `netlify.toml`, `.github/workflows/ci.yml`.
 * **Step Goal:** Package the backend for non-US (`fra` Frankfurt) deployment with persistent SQLite storage on Fly.io and configure zero-config static SPA deployment on Netlify.
@@ -647,4 +647,4 @@ Every requirement from the product specification and technical audit has been cr
 | **Session CVD Persistence** | Survive mid-day backend restarts without resetting Session CVD to `0` | ADR-06, Section 3.2.1 (`00:00 UTC` Binance `1m` taker-buy quote volume backfill + midnight rollover), Step 2.2 | **Mitigated** |
 | **LWC v5 API & DPI Crispness** | Strict v5 `addSeries(CandlestickSeries)` + `ISeriesPrimitive` `useMediaCoordinateSpace` `0.5px` hairline alignment | Step 1.1, Step 4.1, Step 4.2, Step 5.2 (`antiSlopAudit.test.ts` v4 ban check) | **Mitigated** |
 | **Layout & Zero-Slop Design** | `100vh` no-scroll, `40px` top strip, `260px` right drawer, 4 exact themes, `tabular-nums`, zero glows/gradients/blurs | ADR-07, Section 4.1–4.3, Step 3.1, Step 3.2, Step 5.2 automated CSS audit | **Mitigated** |
-| **Subagent Separation** | Plan references subagent IDs sequentially; full agent profiles/skills separated into `subagents.md` | Section 1.3, Section 1.4, Steps 1.1–5.2 | **Verified** |
+| **Subagent Separation** | Plan references subagent IDs sequentially; full agent profiles/skills separated into `.agents/subagents/SUBAGENTS.md` | Section 1.3, Section 1.4, Steps 1.1–5.2 | **Verified** |

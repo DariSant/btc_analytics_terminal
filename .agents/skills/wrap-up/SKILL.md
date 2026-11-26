@@ -3,13 +3,13 @@ name: wrap-up
 description: Wrap up the work session by executing Git ingestion, pruning vestiges, updating project history and roadmap, syncing Git, and confirming completion.
 ---
 
-# `/wrap-up` Command Workflow
+# `/wrap_up` Command Workflow
 
-When the user invokes `/wrap-up` or instructs to "wrap up":
+When the user invokes `/wrap_up` or instructs to "wrap up":
 
 1. **Pre-Wrap-Up Git Ingestion Query**:
    - Run `git status --porcelain`. If the working tree is clean, skip directly to Step 2.
-   - Verify untracked files against `.gitignore` to prevent staging secrets, environment files, or scratch binaries ([Rule 1.5](../../AGENTS.md#1-core-operating-principles)).
+   - Verify untracked files against `.gitignore` to prevent staging secrets, environment files, or scratch binaries ([Section 7 — Zero Secrets](../../AGENTS.md#7-security-git--rule-updates)).
    - Formulate a concise conventional commit message (e.g., `feat:`, `docs:`, `fix:`) reflecting the session's work.
    - Prompt the project owner to specify how changes should be processed:
      - `Push to main` (Direct push or merge current branch into `main`)

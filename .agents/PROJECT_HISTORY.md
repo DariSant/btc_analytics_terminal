@@ -21,3 +21,12 @@ Each entry must record:
   * `Documentation` — Execution plans, subagent specs, skills, or project guidelines.
 * **Change**: Concise summary of what was altered, added, or removed.
 * **Rationale**: Objective or driving business/technical factor.
+
+---
+
+## Entries
+
+### 2026-11-26 14:44 (CET) — Initial Workspace & Orchestration Configuration
+* **Category**: `Documentation` / `Architecture`
+* **Change**: Consolidated all workspace orchestration under `.agents/` (`AGENTS.md`, `PROJECT_HISTORY.md`, `TODO.md`, `execution_plan/SUMMARY.md`, `execution_plan/EXECUTION_PLAN.md`, `subagents/SUBAGENTS.md`), added `/wrap_up` and `/explain` skills under `.agents/skills/`, removed redundant root copies, and verified `.gitignore` and `README.md`.
+* **Rationale**: Establishes a single-source-of-truth Antigravity workspace layout so agents orient via `SUMMARY.md` before loading targeted execution plan sections, with clean state tracking and session wrap-up governance.
