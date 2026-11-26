@@ -10,7 +10,7 @@
   - `ADR-01`: Fly.io (`fra` Frankfurt) + persistent volume SQLite (`aiosqlite` WAL mode).
   - `ADR-02`: Hybrid REST backfill + multiplexed `/ws/btc` with client `set_timeframe`.
   - `ADR-03`: Pure-Python analytical Black-76 Gamma & standard dealer GEX sign (`+Call` / `-Put`).
-  - `ADR-04`: OI-weighted swing leverage projections (`10x`, `25x`, `50x`, `100x`) with auto-mitigation.
+  - `ADR-04`: OI-weighted swing leverage projections (`10x`, `25x`, `50x`, `100x`) with auto-mitigation & left-docked `16px` thermal bar + tag-free intensity-scaled peak projections.
   - `ADR-05`: Per-venue `100ms` whale burst aggregation & custom `ISeriesPrimitive` bubbles.
   - `ADR-06`: Client-side 80-bin VRVP & `00:00 UTC` taker-buy backfilled Session CVD.
   - `ADR-07`: Standardized `40px` header strip & `calc(100vh - 40px)` canvas.
@@ -54,9 +54,9 @@
 | | **3.2** | `100vh` Zero-Scroll Shell: `40px` Header & `260px` Drawer (`SA-UI`) | [L487–L509](EXECUTION_PLAN.md#L487-L509) |
 | **Phase 4: Charting** | **4.1** | LWC v5.3+ Core Host, Volume Split & Live Sync (`SA-CHART`) | [L512–L535](EXECUTION_PLAN.md#L512-L535) |
 | | **4.2** | Primitives Part 1: `VRVPPrimitive` & `WhaleBubblesPrimitive` (`SA-CHART`) | [L536–L558](EXECUTION_PLAN.md#L536-L558) |
-| | **4.3** | Primitives Part 2: `LiquidationPrimitive` & `OptionsWallsPrimitive` (`SA-CHART`) | [L559–L583](EXECUTION_PLAN.md#L559-L583) |
-| **Phase 5: Ops & QA** | **5.1** | Dockerization, Fly.io (`fra`), Netlify & CI Pipeline (`SA-OPS`) | [L586–L611](EXECUTION_PLAN.md#L586-L611) |
-| | **5.2** | Full-Stack Smoke Harness & Anti-Slop Design Audit (`SA-OPS`) | [L612–L634](EXECUTION_PLAN.md#L612-L634) |
+| | **4.3** | Primitives Part 2: `LiquidationPrimitive` (`16px` Thermal Strip + Peaks) & `OptionsWallsPrimitive` (`SA-CHART`) | [L559–L583](EXECUTION_PLAN.md#L559-L583) |
+| **Phase 5: Ops & QA** | **5.1** | Dockerization, Fly.io (`fra`), Netlify & CI Pipeline (`SA-OPS`) | [L587–L612](EXECUTION_PLAN.md#L587-L612) |
+| | **5.2** | Full-Stack Smoke Harness & Anti-Slop Design Audit (`SA-OPS`) | [L613–L635](EXECUTION_PLAN.md#L613-L635) |
 
-## 6. Architecture & Completeness Self-Audit Matrix ([Section 6](EXECUTION_PLAN.md#L635-L650))
+## 6. Architecture & Completeness Self-Audit Matrix ([Section 6](EXECUTION_PLAN.md#L636-L651))
 - Verification checklist mapping ADRs, endpoints, and primitives to implementation steps.

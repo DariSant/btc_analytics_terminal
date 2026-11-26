@@ -1,13 +1,11 @@
 import { useTerminalStore } from "../store/useTerminalStore";
-import type {
-  LayerVisibilityState,
-  WhaleThresholdUsd,
-} from "../types/terminal";
+import type { LayerVisibilityState } from "../types/terminal";
 import {
   formatBtcSize,
   formatCompactUsd,
   formatStrike,
 } from "../utils/formatters";
+import { getFixedWhaleMinUsd } from "../utils/whaleEscalation";
 
 interface ControlDrawerProps {
   onSelectExpiry: (expiry: string) => void;
@@ -25,26 +23,16 @@ const OVERLAY_ITEMS: ReadonlyArray<{
   { key: "maxPain", label: "Max Pain" },
 ];
 
-const WHALE_PILLS: ReadonlyArray<{
-  value: WhaleThresholdUsd;
-  label: string;
-}> = [
-  { value: 100000, label: "$100k" },
-  { value: 250000, label: "$250k" },
-  { value: 500000, label: "$500k" },
-  { value: 1000000, label: "$1M" },
-];
-
 export function ControlDrawer({ onSelectExpiry }: ControlDrawerProps) {
   const drawerOpen = useTerminalStore((s) => s.drawerOpen);
+  const timeframe = useTerminalStore((s) => s.timeframe);
   const layers = useTerminalStore((s) => s.layers);
-  const minWhaleUsd = useTerminalStore((s) => s.minWhaleUsd);
   const selectedExpiry = useTerminalStore((s) => s.selectedExpiry);
   const availableExpiries = useTerminalStore((s) => s.availableExpiries);
   const optionsSummary = useTerminalStore((s) => s.optionsSummary);
 
   const toggleLayer = useTerminalStore((s) => s.toggleLayer);
-  const setMinWhaleUsd = useTerminalStore((s) => s.setMinWhaleUsd);
+  const fixedWhaleFloor = getFixedWhaleMinUsd(timeframe);
 
   const netGex = optionsSummary?.net_gex_usd ?? null;
   const gexIsPositive = netGex !== null && netGex >= 0;
@@ -77,12 +65,21 @@ export function ControlDrawer({ onSelectExpiry }: ControlDrawerProps) {
       <div className="flex flex-col">
         {/* Section 1: Chart Overlays */}
         <section className="hairline-b p-3">
-          <h2
-            className="text-[11px] font-semibold uppercase tracking-[0.04em] mb-2"
-            style={{ color: "var(--text-muted)" }}
-          >
-            Chart Overlays
-          </h2>
+          <div className="flex items-center justify-between mb-2">
+            <h2
+              className="text-[11px] font-semibold uppercase tracking-[0.04em] m-0"
+              style={{ color: "var(--text-muted)" }}
+            >
+              Chart Overlays
+            </h2>
+            <span
+              className="font-mono-tabular text-[10px]"
+              style={{ color: "var(--text-muted)" }}
+              title="Fixed per-timeframe minimum whale sweep threshold"
+            >
+              {timeframe} &ge; {formatCompactUsd(fixedWhaleFloor)}
+            </span>
+          </div>
           <div className="flex flex-col">
             {OVERLAY_ITEMS.map((item) => {
               const enabled = layers[item.key];
@@ -122,53 +119,7 @@ export function ControlDrawer({ onSelectExpiry }: ControlDrawerProps) {
           </div>
         </section>
 
-        {/* Section 2: Whale Filter */}
-        <section className="hairline-b p-3">
-          <div className="flex items-center justify-between mb-2">
-            <h2
-              className="text-[11px] font-semibold uppercase tracking-[0.04em]"
-              style={{ color: "var(--text-muted)" }}
-            >
-              Whale Filter
-            </h2>
-            <span
-              className="font-mono-tabular text-[10px]"
-              style={{ color: "var(--text-muted)" }}
-            >
-              MIN NOTIONAL
-            </span>
-          </div>
-          <div
-            className="hairline-border grid grid-cols-4 rounded-[2px] overflow-hidden"
-            role="group"
-            aria-label="Whale Minimum USD"
-          >
-            {WHALE_PILLS.map((pill, idx) => {
-              const active = minWhaleUsd === pill.value;
-              return (
-                <button
-                  key={pill.value}
-                  type="button"
-                  onClick={() => setMinWhaleUsd(pill.value)}
-                  className="font-mono-tabular py-1 text-[11px] text-center cursor-pointer"
-                  style={{
-                    backgroundColor: active ? "var(--bg-canvas)" : "transparent",
-                    color: active ? "var(--text-primary)" : "var(--text-muted)",
-                    fontWeight: active ? 600 : 400,
-                    borderRight:
-                      idx < WHALE_PILLS.length - 1
-                        ? "1px solid var(--border-hairline)"
-                        : "none",
-                  }}
-                >
-                  {pill.label}
-                </button>
-              );
-            })}
-          </div>
-        </section>
-
-        {/* Section 3: Options Expiry & Strike Readout */}
+        {/* Section 2: Options Expiry & Strike Readout */}
         <section className="p-3 flex flex-col gap-2.5">
           <div className="flex items-center justify-between">
             <h2

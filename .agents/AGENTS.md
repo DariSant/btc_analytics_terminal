@@ -52,3 +52,22 @@ When the user runs `/wrap_up`, execute this exact sequence:
 
 - **Gate Verification:** Run all applicable automated tests, typechecks, and linters (`pytest`, `ruff`, `mypy`, `tsc --noEmit`, `vitest`, `npm run build`) at every gate, milestone, and relevant build.
 - **Plain-Language Verification Guide:** After each milestone or relevant build, explain in plain language what was built and give concrete steps for the user to verify it—especially for UI builds (how to run/preview, what layout, themes, toggles, and live behaviors to inspect).
+
+
+## 9. Multi-Agent & `/swarm` Workflow
+
+The orchestrator triggers parallel multi-agent execution **automatically** whenever a task benefits from concurrent workstreams (e.g., independent `backend/`, `frontend/`, `ops/` slices, or multi-angle audits/reviews); otherwise it uses single-agent or sequential execution per [`.agents/subagents/SUBAGENTS.md`](.agents/subagents/SUBAGENTS.md).
+
+- **Execution Mechanism (Auto vs. `/swarm`):**
+  - **Automatic Orchestration (Default):** When the orchestrator determines parallel delegation is needed without an active `/swarm`, launch concurrent workers automatically via `invoke_subagent` (for distinct parallel roles) or `run_workflow` (for programmatic `parallel` / `pipeline` fan-outs).
+  - **Board `/swarm` Mode:** Use the `swarm` board tool whenever `/swarm` is active (or explicitly invoked/instructed by a skill).
+- **Coordinator Authority:** The coordinator owns task slicing, worker briefs, locking wire contracts (`backend/app/schemas.py` <-> `frontend/src/types/terminal.ts`) before fanning out writers, landing changes, `.agents/TODO.md` updates, `.agents/PROJECT_HISTORY.md` (via `/wrap_up` only), and final Section 8 verification. Workers never edit `.agents/TODO.md`, `.agents/PROJECT_HISTORY.md`, or run `git commit`/`git push`.
+- **Workspace & Ownership Isolation:**
+  - Spawn concurrent writers/builders with `workspace: "share"` and strictly non-overlapping file ownership.
+  - Spawn read-only auditors, researchers, and verifiers with `workspace: "inherit"`.
+- **Worker Brief Standard:** Every worker prompt/brief must specify: (1) required context (`SUMMARY.md` + target `EXECUTION_PLAN.md` lines and relevant skills), (2) owned file paths, (3) hard guardrails (no unowned edits, no `# type: ignore`/`as any`, no blocking foreground servers, zero secrets), and (4) exact verification commands defining "done".
+- **Standard Execution Flow:**
+  4. **Assess & Slice:** Decide automatically whether parallel execution saves time/risk; if so, lock shared contracts first and assign disjoint scopes.
+  5. **Parallel Build / Audit:** Run workers concurrently within their owned paths and self-verify.
+  6. **Land & Gate:** Integrate/merge all worker changes into the primary working copy **before** tearing down workers (`kill` in `/swarm`), then run full Section 8 gates across the integrated codebase.
+  7. **Report:** Summarize landed changes, gate results, and a plain-language verification guide for the user.

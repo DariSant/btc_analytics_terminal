@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { PanelRightClose, PanelRightOpen } from "lucide-react";
+import { BookOpen, PanelRightClose, PanelRightOpen } from "lucide-react";
 import { useTerminalStore } from "../store/useTerminalStore";
 import type { TimeframeLiteral, WsConnectionStatus } from "../types/terminal";
 import { THEMES } from "../utils/themeTokens";
@@ -49,9 +49,11 @@ export function TopTelemetryBar({ onSelectTimeframe }: TopTelemetryBarProps) {
   const timeframe = useTerminalStore((s) => s.timeframe);
   const theme = useTerminalStore((s) => s.theme);
   const drawerOpen = useTerminalStore((s) => s.drawerOpen);
+  const legendOpen = useTerminalStore((s) => s.legendOpen);
   const wsStatus = useTerminalStore((s) => s.wsStatus);
   const setTheme = useTerminalStore((s) => s.setTheme);
   const toggleDrawer = useTerminalStore((s) => s.toggleDrawer);
+  const toggleLegend = useTerminalStore((s) => s.toggleLegend);
 
   const [nowMs, setNowMs] = useState<number>(() => Date.now());
   useEffect(() => {
@@ -314,6 +316,21 @@ export function TopTelemetryBar({ onSelectTimeframe }: TopTelemetryBarProps) {
           }}
         >
           {drawerOpen ? <PanelRightClose size={14} /> : <PanelRightOpen size={14} />}
+        </button>
+
+        <button
+          type="button"
+          onClick={toggleLegend}
+          aria-label={legendOpen ? "Collapse legend pane" : "Expand legend pane"}
+          aria-expanded={legendOpen}
+          title={legendOpen ? "Hide Chart Legend" : "Show Chart Legend"}
+          className="hairline-border flex items-center justify-center w-7 h-6 rounded-[2px] cursor-pointer"
+          style={{
+            backgroundColor: legendOpen ? "var(--bg-canvas)" : "transparent",
+            color: legendOpen ? "var(--accent-bull)" : "var(--text-primary)",
+          }}
+        >
+          <BookOpen size={14} />
         </button>
       </div>
     </header>

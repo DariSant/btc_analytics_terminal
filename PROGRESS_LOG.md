@@ -75,3 +75,42 @@
 - **Files Created/Updated:** `frontend/src/components/TopTelemetryBar.tsx`, `frontend/src/components/ControlDrawer.tsx`, `frontend/src/App.tsx`, `frontend/src/main.tsx`, `frontend/src/__tests__/shell.test.tsx`
 - **Verification Results:** `npx tsc --noEmit` -> exit 0; `npx vitest run` -> exit 0 (16 passed across 4 files); `npm run build` -> exit 0 (`dist/` built in 3.63s)
 - **Notes for Downstream Agents:** `App.tsx` hosts the `flex-1 min-w-0 h-full` chart slot inside `.terminal-workspace` (`calc(100vh - 40px)`) and wires `TerminalSyncController` + `TerminalWsClient` on mount; ready for `SA-CHART` Step 4.1 (`UnifiedChart.tsx`).
+
+## [STEP 4.1] — COMPLETE
+- **Subagent:** SA-CHART
+- **Timestamp (UTC):** 2026-11-26T15:44:05Z
+- **Skills Loaded:** `.agents/skills/lightweight_charts_v5_primitives/skill_lightweight_charts_v5_primitives.md`, `.agents/skills/institutional_anti_slop_ui_theme_tokens/skill_institutional_anti_slop_ui_theme_tokens.md`
+- **Files Created/Updated:** `frontend/src/utils/colorAlpha.ts`, `frontend/src/components/UnifiedChart.tsx`, `frontend/src/App.tsx`
+- **Verification Results:** `npx tsc --noEmit` -> exit 0; `npx vitest run` -> exit 0 (16 passed); `npm run build` -> exit 0
+- **Notes for Downstream Agents:** Single LWC v5.3+ `createChart()` instance with `CandlestickSeries` + bottom `18%` `HistogramSeries` volume pane, `ResizeObserver`, imperative Zustand `.setData()` / `.update()`, and dynamic 4-theme switching.
+
+## [STEP 4.2] — COMPLETE
+- **Subagent:** SA-CHART
+- **Timestamp (UTC):** 2026-11-26T15:45:52Z
+- **Skills Loaded:** `.agents/skills/lightweight_charts_v5_primitives/skill_lightweight_charts_v5_primitives.md`, `.agents/skills/institutional_anti_slop_ui_theme_tokens/skill_institutional_anti_slop_ui_theme_tokens.md`
+- **Files Created/Updated:** `frontend/src/primitives/BaseOverlayPrimitive.ts`, `frontend/src/primitives/VRVPPrimitive.ts`, `frontend/src/primitives/WhaleBubblesPrimitive.ts`, `frontend/src/components/UnifiedChart.tsx`
+- **Verification Results:** `npx tsc --noEmit` -> exit 0; `npx vitest run` -> exit 0 (19 passed across 5 files); `npm run build` -> exit 0
+- **Notes for Downstream Agents:** `VRVPPrimitive` renders right-docked 80-bin profile + `POC`/`VAH`/`VAL` offset cleanly left of the `16px` thermal strip; `WhaleBubblesPrimitive` renders area-scaled venue bubbles ($R \in [4, 28]$) with crosshair hover HUD readout.
+
+## [STEP 4.3] — COMPLETE
+- **Subagent:** SA-CHART
+- **Timestamp (UTC):** 2026-11-26T15:45:52Z
+- **Skills Loaded:** `.agents/skills/lightweight_charts_v5_primitives/skill_lightweight_charts_v5_primitives.md`, `.agents/skills/institutional_anti_slop_ui_theme_tokens/skill_institutional_anti_slop_ui_theme_tokens.md`
+- **Files Created/Updated:** `frontend/src/primitives/LiquidationPrimitive.ts`, `frontend/src/primitives/OptionsWallsPrimitive.ts`, `frontend/src/components/UnifiedChart.tsx`, `frontend/src/__tests__/primitives.test.ts`
+- **Verification Results:** Anti-slop + v4 ban audit -> clean; `npx tsc --noEmit` -> exit 0; `npx vitest run` -> exit 0 (19 passed across 5 files); `npm run build` -> exit 0 (`dist/assets/index-BZXqat3M.js` 437.96 kB)
+- **Notes for Downstream Agents:** `LiquidationPrimitive` implements the edge-first `16px` docked continuous thermal strip + top 4 Canvas `createLinearGradient` peak projections + hollow diamond/`x` realized markers; `OptionsWallsPrimitive` renders Call/Put Walls, Max Pain ray, and left-edge top-5 GEX micro-bars. Ready for Phase 5 (`SA-OPS`).
+
+## [STEP 4.4] — COMPLETE (Legend & Field Guide Pane + Left-Margin Heatmap Refinement)
+- **Timestamp (UTC):** 2026-11-26T16:17:00Z
+- **Files Created/Updated:** `frontend/src/primitives/LiquidationPrimitive.ts`, `frontend/src/primitives/OptionsWallsPrimitive.ts`, `frontend/src/components/UnifiedChart.tsx`, `frontend/src/components/LegendDrawer.tsx`, `frontend/src/components/TopTelemetryBar.tsx`, `frontend/src/store/useTerminalStore.ts`, `frontend/src/App.tsx`, `frontend/src/__tests__/primitives.test.ts`, `frontend/src/__tests__/shell.test.tsx`
+- **Notes for Downstream Agents:** `LiquidationPrimitive` docks `16px` thermal bar on the left margin (`x = 0..16`, no tags, intensity-scaled projection length & strength); `LegendDrawer` (`legendOpen: false` by default, `260px` wide) opens right of `ControlDrawer` via the `BookOpen` icon button immediately right of the drawer toggle in `TopTelemetryBar`.
+
+## [STEP 4.5] — COMPLETE (Whale Bubble Escalation, Clustering & Zoom Auto-Hide)
+- **Timestamp (UTC):** 2026-11-26T16:35:00Z
+- **Files Created/Updated:** `backend/app/db/repository.py`, `backend/tests/test_repository.py`, `frontend/src/utils/whaleEscalation.ts`, `frontend/src/store/useTerminalStore.ts`, `frontend/src/services/apiClient.ts`, `frontend/src/components/ControlDrawer.tsx`, `frontend/src/App.tsx`, `frontend/src/primitives/WhaleBubblesPrimitive.ts`, `frontend/src/components/UnifiedChart.tsx`, `frontend/src/components/LegendDrawer.tsx`, `frontend/src/__tests__/whaleEscalation.test.ts`, `frontend/src/__tests__/shell.test.tsx`, `frontend/src/__tests__/store.test.ts`
+- **Notes for Downstream Agents:** Backend retains >= $1M whale prints for 60 days; frontend applies TF auto-escalation ($250k on `1m` up to $10M on `1d`), intra-bar 0.25% clustering, cold-start `bar_delta` markers on `1h`/`4h`/`1d`, and `< 3.5px/bar` zoom auto-hide.
+
+## [STEP 4.6] — COMPLETE (Fixed TF Whale Thresholds, Visible-Candle Budget, Accordion Legend & 3x Guide Pane)
+- **Timestamp (UTC):** 2026-11-26T16:58:00Z
+- **Files Created/Updated:** `backend/app/config.py`, `backend/app/db/repository.py`, `backend/app/api/routes.py`, `backend/tests/test_repository.py`, `backend/tests/test_api_and_ws.py`, `frontend/src/utils/whaleEscalation.ts`, `frontend/src/store/useTerminalStore.ts`, `frontend/src/services/apiClient.ts`, `frontend/src/components/ControlDrawer.tsx`, `frontend/src/components/LegendDrawer.tsx`, `frontend/src/components/GuideDrawer.tsx`, `frontend/src/primitives/WhaleBubblesPrimitive.ts`, `frontend/src/components/UnifiedChart.tsx`, `frontend/src/App.tsx`, `frontend/src/styles/tokens.css`, `frontend/src/__tests__/whaleEscalation.test.ts`, `frontend/src/__tests__/primitives.test.ts`, `frontend/src/__tests__/shell.test.tsx`, `frontend/src/__tests__/store.test.ts`
+- **Notes for Downstream Agents:** Minimum whale threshold raised to `$250k`; `$100k` and `bar_delta` removed; fixed per-TF floors (`$250k`..`$10M`) + visible-candle density budget (`[6, 36]`) + `< 3.5px/bar` auto-hide; `LegendDrawer` sections start collapsed with triangles, shrink to `160px` rail while `ControlDrawer` collapses when `GuideDrawer` (`min(760px, 56vw)`) opens.
