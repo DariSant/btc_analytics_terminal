@@ -36,3 +36,6 @@ Thumbs.db
 
 # Local generated explanations
 explanations/
+
+# Netlify CLI local link state
+.netlify/

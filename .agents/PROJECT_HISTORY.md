@@ -66,3 +66,13 @@ Each entry must record:
   - Implemented `frontend/src/__tests__/antiSlopAudit.test.ts` (with `node-shims.d.ts` for strict `tsc` without `@types/node`), `scripts/smoke_e2e.py` (in-process REST + `/ws/btc` `set_timeframe` contract check), and updated `README.md` with local dev, verification, Fly.io (`--ha=false`), and Netlify runbooks.
 * **Rationale**: Completes all 5 phases of `EXECUTION_PLAN.md` with automated anti-slop, LWC v5 API, and end-to-end wire-contract verification (`20/20` pytest, `ruff`, `mypy`, `tsc`, `30/30` vitest, `vite build`, `smoke_e2e.py` all green).
 * **Next Step**: Merge `feat/phase-5-ops-qa` into `main` when ready and deploy to Fly.io (`fra`) + Netlify.
+
+### 2026-11-26 19:10 (CET) — Production Deployment (Fly.io `fra` + Netlify) & Repo Hygiene
+* **Category**: `DevOps / QA` / `Documentation`
+* **Change**:
+  - Synced `.env.example` (`# WHALE_MIN_USD=250000`), aligned `backend/Dockerfile` + `README.md` to a repo-root Docker build context (`COPY backend/pyproject.toml ./`, `COPY backend/app ./app`, `fly deploy --config fly.toml --ha=false`), and added `explanations/` + `.netlify/` to `.gitignore`.
+  - Verified the full local test/lint/smoke suite (`ruff`, `mypy`, `pytest` `20/20`, `tsc --noEmit`, `vitest` `30/30`, `vite build`, `smoke_e2e.py`) and confirmed GitHub Actions CI (`45871376433`) passed on `main` (`e99f7b5`).
+  - Provisioned Fly.io app `btc-analytics-terminal` with `1 GB` `fra` volume `btc_terminal_data`, staged `CORS_ORIGINS=["https://btc-analytics-terminal.netlify.app"]`, deployed single-machine (`--ha=false --depot=false --remote-only`), and verified live `/api/v1/health`, `/api/v1/klines`, and `/api/v1/options` responses.
+  - Created Netlify project `btc-analytics-terminal`, configured `VITE_API_URL` / `VITE_WS_URL`, and deployed `https://btc-analytics-terminal.netlify.app` (`HTTP 200` + verified `Access-Control-Allow-Origin`).
+* **Rationale**: Ships the full read-only BTC derivatives & order-flow analytics terminal to production on non-US (`fra`) infrastructure with persistent SQLite WAL storage and verified CORS/stream connectivity.
+* **Next Step**: Monitor live production telemetry; optionally configure custom domain or queue post-launch enhancements.

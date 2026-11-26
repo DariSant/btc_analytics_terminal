@@ -16,12 +16,8 @@ Standardized TODO Format Specification:
 
 ## P1 — Immediate / High Priority
 
-- *All planned tasks in `.agents/execution_plan/EXECUTION_PLAN.md` (Phases 1–5) are complete.*
+- *No pending P1 tasks — Phases 1–5 and production deployment (`fra` + Netlify) are complete.*
 
 ## P2 — Soon / Medium Priority
 
-### Release & Production Deployment
-
-- [ ] **Deploy Production Stack (`fra` + Netlify)**: Provision Fly.io Frankfurt volume and Netlify environment variables.
-  Create `btc_terminal_data` in `fra`, set `CORS_ORIGINS`, deploy single-machine (`--ha=false`), and configure `VITE_API_URL` / `VITE_WS_URL` on Netlify.
-  Action: Follow the Production Deployment steps in `README.md` (`fly volumes create ...`, `fly deploy --config fly.toml --ha=false`). (`README.md`)
+- *No pending P2 tasks.*
