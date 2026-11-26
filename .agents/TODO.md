@@ -24,4 +24,4 @@ Standardized TODO Format Specification:
 
 - [ ] **Deploy Production Stack (`fra` + Netlify)**: Provision Fly.io Frankfurt volume and Netlify environment variables.
   Create `btc_terminal_data` in `fra`, set `CORS_ORIGINS`, deploy single-machine (`--ha=false`), and configure `VITE_API_URL` / `VITE_WS_URL` on Netlify.
-  Action: Follow the Production Deployment steps in `README.md` (`fly volumes create ...`, `fly deploy ./backend --config fly.toml --ha=false`). (`README.md`)
+  Action: Follow the Production Deployment steps in `README.md` (`fly volumes create ...`, `fly deploy --config fly.toml --ha=false`). (`README.md`)

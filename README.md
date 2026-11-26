@@ -69,14 +69,14 @@ fly volumes create btc_terminal_data --region fra --size 1
 # 2. Set production CORS origins for your Netlify URL
 fly secrets set CORS_ORIGINS='["https://your-site.netlify.app"]'
 
-# 3. Deploy single-machine instance (--ha=false prevents unattached SQLite replicas)
-fly deploy ./backend --config fly.toml --ha=false
+# 3. Deploy single-machine instance from repo root (--ha=false prevents unattached SQLite replicas)
+fly deploy --config fly.toml --ha=false
 ```
 
 Local container sanity build:
 
 ```bash
-docker build -t btc-terminal-backend ./backend
+docker build -f backend/Dockerfile -t btc-terminal-backend .
 ```
 
 ### Frontend on Netlify

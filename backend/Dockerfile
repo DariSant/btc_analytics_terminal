@@ -12,8 +12,8 @@ RUN addgroup --system appgroup \
     && mkdir -p /data \
     && chown -R appuser:appgroup /app /data
 
-COPY pyproject.toml ./
-COPY app ./app
+COPY backend/pyproject.toml ./
+COPY backend/app ./app
 
 RUN pip install --upgrade pip \
     && pip install . \
