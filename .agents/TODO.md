@@ -16,12 +16,12 @@ Standardized TODO Format Specification:
 
 ## P1 — Immediate / High Priority
 
-### Phase 5: Deployment Topology, CI/CD & End-to-End Verification
+- *All planned tasks in `.agents/execution_plan/EXECUTION_PLAN.md` (Phases 1–5) are complete.*
 
-- [ ] **Dockerize & Configure Fly.io (`fra`), Netlify & CI (`SA-OPS` — Step 5.1)**: Create `backend/Dockerfile`, `.dockerignore`, `fly.toml`, `netlify.toml`, and `.github/workflows/ci.yml`.
-  Pin Fly.io `primary_region = "fra"` with `auto_stop_machines = "off"` and `/data` SQLite WAL mount, configure Netlify SPA redirects/security headers, and wire backend + frontend CI checks.
-  Action: Implement all 5 infra/CI files and verify `fly.toml` region check plus backend/frontend test and build suites. (`.agents/execution_plan/EXECUTION_PLAN.md#L587-L612`)
+## P2 — Soon / Medium Priority
 
-- [ ] **Build Full-Stack Smoke Harness & Anti-Slop Audit (`SA-OPS` — Step 5.2)**: Create `frontend/src/__tests__/antiSlopAudit.test.ts`, `scripts/smoke_e2e.py`, and root `README.md`.
-  Enforce zero banned CSS/Tailwind tokens, all 4 theme hex palettes, `tabular-nums`, `40px`/`260px` geometry, and zero LWC v4 calls, plus verify FastAPI REST and `/ws/btc` `set_timeframe` end-to-end.
-  Action: Implement audit test, smoke script, and runbook, then run full backend, frontend, and `python scripts/smoke_e2e.py` verification. (`.agents/execution_plan/EXECUTION_PLAN.md#L613-L635`)
+### Release & Production Deployment
+
+- [ ] **Deploy Production Stack (`fra` + Netlify)**: Provision Fly.io Frankfurt volume and Netlify environment variables.
+  Create `btc_terminal_data` in `fra`, set `CORS_ORIGINS`, deploy single-machine (`--ha=false`), and configure `VITE_API_URL` / `VITE_WS_URL` on Netlify.
+  Action: Follow the Production Deployment steps in `README.md` (`fly volumes create ...`, `fly deploy ./backend --config fly.toml --ha=false`). (`README.md`)

@@ -1,0 +1,40 @@
+# Git & environment
+.git/
+.gitignore
+.env
+.env.*
+
+# Python virtualenvs & caches
+.venv/
+venv/
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+tests/
+backend/.venv/
+backend/tests/
+backend/.pytest_cache/
+backend/.mypy_cache/
+backend/.ruff_cache/
+
+# Frontend & local data
+frontend/
+node_modules/
+dist/
+data/
+*.db
+*.db-wal
+*.db-shm
+*.sqlite
+*.sqlite3
+
+# Docs & local scratch
+.agents/
+explanations/
+scripts/
+*.html
+*.md
