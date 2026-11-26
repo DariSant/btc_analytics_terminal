@@ -16,16 +16,11 @@ Standardized TODO Format Specification:
 
 ## P1 — Immediate / High Priority
 
-### Phase 1: Workspace Foundation & Cross-Stack Contracts (Step 1.1)
+### Phase 3: Frontend 4-Theme Engine, Utilities, Store & WS/REST Sync (Step 3.1)
 
-- [ ] **Scaffold Backend Python 3.12 Toolchain (`SA-ARCH`)**: Initialize `backend/pyproject.toml` and `backend/app/config.py`.
-  Pin FastAPI, Uvicorn, WebSockets, httpx, aiosqlite, Pydantic, pytest, ruff, and mypy, and define `Settings(BaseSettings)` for exchange URLs, thresholds, and retention.
-  Action: Create `backend/pyproject.toml`, `backend/app/__init__.py`, and `backend/app/config.py`, install dev dependencies, and run `cd backend && ruff check . && mypy app`. (`.agents/execution_plan/EXECUTION_PLAN.md#L310-L329`)
+- [ ] **Implement 4-Theme Tokens, `timeSnap`, `vrvpCalc`, Store & Clients (`SA-UI`)**: Create `frontend/src/styles/tokens.css`, `utils/*`, `store/useTerminalStore.ts`, `services/*`, and Vitest suites.
+  Enforce exact 4-theme CSS variables (`readThemeTokens()`), zero banned CSS/Tailwind slop, 80-bin VRVP 70% Value Area math, `snapTimestampToBar`, and AbortController/reconnect sync.
+  Action: Read `skills/institutional_anti_slop_ui_theme_tokens` and `skills/derivatives_market_structure_quant_math`, build modules + tests, and run `cd frontend && npx tsc --noEmit && npx vitest run`. (`.agents/execution_plan/EXECUTION_PLAN.md#L462-L486`)
 
-- [ ] **Scaffold Frontend React 19 + Vite + LWC v5 Toolchain (`SA-ARCH`)**: Initialize `frontend/package.json`, `tsconfig.json`, `vite.config.ts`, and `index.html`.
-  Pin React 19, `lightweight-charts@^5.3.0`, Zustand, Tailwind v4, TypeScript, and Vitest; configure Inter & JetBrains Mono fonts and `data-theme="oled-dark"`.
-  Action: Create frontend config files, run `npm install`, and verify `cd frontend && npx tsc --noEmit`. (`.agents/execution_plan/EXECUTION_PLAN.md#L310-L329`)
-
-- [ ] **Create `.env.example` & `PROGRESS_LOG.md` (`SA-ARCH`)**: Document `VITE_API_URL` and `VITE_WS_URL` and initialize the subagent handoff log.
-  Required by Step 1.1 pass/fail criteria and sequential handoff governance.
-  Action: Create `.env.example` and `PROGRESS_LOG.md` at the repository root. (`.agents/execution_plan/EXECUTION_PLAN.md#L313-L326`)
+- [ ] **Assemble `100vh` Zero-Scroll Chrome (`SA-UI` — Step 3.2)**: Build `TopTelemetryBar.tsx` (`40px`), `ControlDrawer.tsx` (`260px` collapsible), `App.tsx`, and `main.tsx`.
+  Wire live telemetry readouts, timeframe pills, 4-theme switcher, layer toggles, whale USD pills, and Deribit expiry selector, then verify `npm run build`. (`.agents/execution_plan/EXECUTION_PLAN.md#L487-L509`)

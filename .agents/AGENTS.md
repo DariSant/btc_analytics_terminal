@@ -47,3 +47,8 @@ When the user runs `/wrap_up`, execute this exact sequence:
 - **Zero Secrets:** Never write, log, or stage API keys, tokens, credentials, or `.env` files. Inspect diffs before any commit.
 - **User-Gated Commits:** Never run `git commit` or `git push` autonomously. Propose a commit when a clean milestone is reached and wait for the user's green light.
 - **Evolving `AGENTS.md`:** Propose high-value norms or constraints for `.agents/AGENTS.md` when discovered, but **ask the user first** and keep any approved addition short and compliant with these rules.
+
+## 8. Milestone Verification & User Checkpoints
+
+- **Gate Verification:** Run all applicable automated tests, typechecks, and linters (`pytest`, `ruff`, `mypy`, `tsc --noEmit`, `vitest`, `npm run build`) at every gate, milestone, and relevant build.
+- **Plain-Language Verification Guide:** After each milestone or relevant build, explain in plain language what was built and give concrete steps for the user to verify it—especially for UI builds (how to run/preview, what layout, themes, toggles, and live behaviors to inspect).
