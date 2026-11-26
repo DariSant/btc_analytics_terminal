@@ -70,7 +70,7 @@ async def get_klines(
 async def get_overlays_history(
     request: Request,
     since_ms: Annotated[int | None, Query(ge=0)] = None,
-    min_whale_usd: Annotated[float, Query(ge=0.0)] = 100_000.0,
+    min_whale_usd: Annotated[float, Query(ge=0.0)] = 250_000.0,
 ) -> OverlaysHistoryResponse:
     """Return persisted Tier-2 whale prints and realized liquidations since timestamp."""
     repo = _get_repo(request)

@@ -11,7 +11,6 @@ import type {
   ThemeId,
   TimeframeLiteral,
   WhalePrint,
-  WhaleThresholdUsd,
   WsConnectionStatus,
 } from "../types/terminal";
 import { applyTheme, getStoredTheme } from "../utils/themeTokens";
@@ -24,9 +23,9 @@ export interface TerminalStoreState {
   timeframe: TimeframeLiteral;
   drawerOpen: boolean;
   legendOpen: boolean;
+  guideOpen: boolean;
   layers: LayerVisibilityState;
   selectedExpiry: string;
-  minWhaleUsd: WhaleThresholdUsd;
   wsStatus: WsConnectionStatus;
 
   candles: CandleBar[];
@@ -46,9 +45,10 @@ export interface TerminalStoreState {
   setDrawerOpen: (open: boolean) => void;
   toggleLegend: () => void;
   setLegendOpen: (open: boolean) => void;
+  toggleGuide: () => void;
+  setGuideOpen: (open: boolean) => void;
   toggleLayer: (layer: keyof LayerVisibilityState) => void;
   setSelectedExpiry: (expiry: string) => void;
-  setMinWhaleUsd: (threshold: WhaleThresholdUsd) => void;
   setWsStatus: (status: WsConnectionStatus) => void;
 
   applyKlinesSnapshot: (
@@ -90,6 +90,7 @@ export const useTerminalStore = create<TerminalStoreState>((set, get) => ({
   timeframe: "5m",
   drawerOpen: true,
   legendOpen: false,
+  guideOpen: false,
   layers: {
     volume: true,
     vrvp: true,
@@ -99,7 +100,6 @@ export const useTerminalStore = create<TerminalStoreState>((set, get) => ({
     maxPain: true,
   },
   selectedExpiry: "ALL",
-  minWhaleUsd: 250000,
   wsStatus: "disconnected",
 
   candles: [],
@@ -131,11 +131,39 @@ export const useTerminalStore = create<TerminalStoreState>((set, get) => ({
   },
 
   toggleLegend: () => {
-    set((state) => ({ legendOpen: !state.legendOpen }));
+    set((state) => {
+      const next = !state.legendOpen;
+      return {
+        legendOpen: next,
+        guideOpen: next ? state.guideOpen : false,
+      };
+    });
   },
 
   setLegendOpen: (open) => {
-    set({ legendOpen: open });
+    set((state) => ({
+      legendOpen: open,
+      guideOpen: open ? state.guideOpen : false,
+    }));
+  },
+
+  toggleGuide: () => {
+    set((state) => {
+      const next = !state.guideOpen;
+      return {
+        guideOpen: next,
+        legendOpen: next ? true : state.legendOpen,
+        drawerOpen: next ? false : state.drawerOpen,
+      };
+    });
+  },
+
+  setGuideOpen: (open) => {
+    set((state) => ({
+      guideOpen: open,
+      legendOpen: open ? true : state.legendOpen,
+      drawerOpen: open ? false : state.drawerOpen,
+    }));
   },
 
   toggleLayer: (layer) => {
@@ -158,10 +186,6 @@ export const useTerminalStore = create<TerminalStoreState>((set, get) => ({
         optionsSummary: nextSummary,
       };
     });
-  },
-
-  setMinWhaleUsd: (minWhaleUsd) => {
-    set({ minWhaleUsd });
   },
 
   setWsStatus: (wsStatus) => {
@@ -195,7 +219,6 @@ export const useTerminalStore = create<TerminalStoreState>((set, get) => ({
       } else if (candle.time > last.time) {
         nextCandles = capTail([...prev, candle], MAX_CLIENT_BARS);
       } else {
-        // Out-of-order older candle tick: ignore to preserve monotonic series time.
         return {};
       }
       return {

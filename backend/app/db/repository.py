@@ -30,7 +30,7 @@ class TerminalRepository:
     def __init__(
         self,
         db_path: str,
-        whale_min_usd: float = 100_000.0,
+        whale_min_usd: float = 250_000.0,
         liq_min_usd: float = 25_000.0,
         flush_interval_sec: float = 1.0,
         batch_size: int = 50,
@@ -192,7 +192,7 @@ class TerminalRepository:
     async def get_recent_whales(
         self,
         since_ms: int,
-        min_usd: float = 100_000.0,
+        min_usd: float = 250_000.0,
         limit: int = 2000,
     ) -> list[WhalePrint]:
         """Fetch recent whale prints matching time and USD bounds in chronological order."""
@@ -291,13 +291,31 @@ class TerminalRepository:
         )
         return int(row[0]), summary
 
-    async def prune_expired(self, retention_days: int = 14, now_ms: int | None = None) -> int:
-        """Delete rows older than retention_days across all Tier-2 tables."""
+    async def prune_expired(
+        self,
+        retention_days: int = 14,
+        now_ms: int | None = None,
+        high_tier_retention_days: int = 60,
+        high_tier_min_usd: float = 1_000_000.0,
+    ) -> int:
+        """Delete expired Tier-2 rows, keeping >= $1M whale prints for high_tier_retention_days."""
         conn = self._require_conn()
         ref_ms = now_ms if now_ms is not None else int(time.time() * 1000)
         cutoff_ms = ref_ms - (retention_days * 86_400 * 1000)
+        high_cutoff_ms = ref_ms - (max(retention_days, high_tier_retention_days) * 86_400 * 1000)
         deleted = 0
-        for table in ("whale_trades", "liquidations", "options_snapshots"):
+
+        cursor = await conn.execute(
+            """
+            DELETE FROM whale_trades
+            WHERE (ts_ms < ? AND notional_usd < ?)
+               OR ts_ms < ?
+            """,
+            (cutoff_ms, high_tier_min_usd, high_cutoff_ms),
+        )
+        deleted += cursor.rowcount if cursor.rowcount > 0 else 0
+
+        for table in ("liquidations", "options_snapshots"):
             cursor = await conn.execute(f"DELETE FROM {table} WHERE ts_ms < ?", (cutoff_ms,))
             deleted += cursor.rowcount if cursor.rowcount > 0 else 0
         await conn.commit()

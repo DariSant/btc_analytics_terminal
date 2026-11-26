@@ -21,7 +21,7 @@ import { OptionsWallsPrimitive } from "../primitives/OptionsWallsPrimitive";
 import { VRVPPrimitive } from "../primitives/VRVPPrimitive";
 import { WhaleBubblesPrimitive } from "../primitives/WhaleBubblesPrimitive";
 import { useTerminalStore } from "../store/useTerminalStore";
-import type { CandleBar, WhalePrint } from "../types/terminal";
+import type { CandleBar } from "../types/terminal";
 import { withAlpha } from "../utils/colorAlpha";
 import {
   formatBtcSize,
@@ -30,6 +30,7 @@ import {
   formatUtcTime,
 } from "../utils/formatters";
 import { readThemeTokens, type ThemePalette } from "../utils/themeTokens";
+import type { ClusteredWhaleBubble } from "../utils/whaleEscalation";
 
 function toCandlestickPoint(bar: CandleBar): CandlestickData<UTCTimestamp> {
   return {
@@ -72,7 +73,9 @@ function sanitizeAscendingBars(candles: readonly CandleBar[]): CandleBar[] {
 
 export function UnifiedChart() {
   const containerRef = useRef<HTMLDivElement | null>(null);
-  const [hoveredWhale, setHoveredWhale] = useState<WhalePrint | null>(null);
+  const [hoveredWhale, setHoveredWhale] =
+    useState<ClusteredWhaleBubble | null>(null);
+  const [whaleZoomHidden, setWhaleZoomHidden] = useState(false);
 
   useEffect(() => {
     const container = containerRef.current;
@@ -156,9 +159,15 @@ export function UnifiedChart() {
     const whalePrimitive = new WhaleBubblesPrimitive({
       whales: initialState.whales,
       timeframe: initialState.timeframe,
-      minWhaleUsd: initialState.minWhaleUsd,
+      candleCount: initialState.candles.length,
       visible: initialState.layers.whales,
       palette,
+      onZoomHiddenChange: (hidden) => {
+        setWhaleZoomHidden(hidden);
+        if (hidden) {
+          setHoveredWhale(null);
+        }
+      },
     });
     const optionsWallsPrimitive = new OptionsWallsPrimitive({
       summary: initialState.optionsSummary,
@@ -184,13 +193,14 @@ export function UnifiedChart() {
         cleanBars.map((bar) => toVolumePoint(bar, activePalette)),
       );
       vrvpPrimitive.updateState({ candles: cleanBars });
+      whalePrimitive.updateState({ candleCount: cleanBars.length });
     };
 
     if (initialState.candles.length > 0) {
       applyFullSeriesData(initialState.candles, palette);
     }
 
-    let lastHoveredRef: WhalePrint | null = null;
+    let lastHoveredRef: ClusteredWhaleBubble | null = null;
     const handleCrosshairMove = (param: MouseEventParams<Time>) => {
       const hit =
         param.point !== undefined
@@ -276,12 +286,10 @@ export function UnifiedChart() {
 
       if (
         state.whales !== prevState.whales ||
-        state.minWhaleUsd !== prevState.minWhaleUsd ||
         state.timeframe !== prevState.timeframe
       ) {
         whalePrimitive.updateState({
           whales: state.whales,
-          minWhaleUsd: state.minWhaleUsd,
           timeframe: state.timeframe,
         });
       }
@@ -316,6 +324,7 @@ export function UnifiedChart() {
         candleSeries.update(toCandlestickPoint(tick));
         volumeSeries.update(toVolumePoint(tick, palette));
         vrvpPrimitive.updateState({ candles: state.candles });
+        whalePrimitive.updateState({ candleCount: state.candles.length });
       }
     });
 
@@ -354,7 +363,7 @@ export function UnifiedChart() {
         className="w-full h-full"
         aria-label="BTCUSDT Unified Market Chart"
       />
-      {hoveredWhale && (
+      {hoveredWhale ? (
         <div
           role="status"
           aria-label="Hovered Whale Print"
@@ -373,9 +382,17 @@ export function UnifiedChart() {
                   : "var(--accent-bear)",
             }}
           >
-            {hoveredWhale.venue} {hoveredWhale.side}
+            {hoveredWhale.venue === "mixed"
+              ? "BINANCE+BYBIT"
+              : hoveredWhale.venue}{" "}
+            {hoveredWhale.side}
           </span>
           <span>{formatCompactUsd(hoveredWhale.notional_usd)}</span>
+          {hoveredWhale.clusterCount > 1 && (
+            <span style={{ color: "var(--text-primary)" }}>
+              x{hoveredWhale.clusterCount}
+            </span>
+          )}
           <span style={{ color: "var(--text-muted)" }}>
             {formatBtcSize(hoveredWhale.size_btc)} @{" "}
             {formatPrice(hoveredWhale.price)}
@@ -384,6 +401,20 @@ export function UnifiedChart() {
             {formatUtcTime(hoveredWhale.ts_ms)}
           </span>
         </div>
+      ) : (
+        whaleZoomHidden && (
+          <div
+            role="status"
+            aria-label="Whale Bubbles Zoom Notice"
+            className="hairline-border font-mono-tabular absolute top-2 left-6 z-10 px-2 py-0.5 rounded-[2px] text-[10px] pointer-events-none"
+            style={{
+              backgroundColor: "var(--bg-surface)",
+              color: "var(--text-muted)",
+            }}
+          >
+            WHALES AUTO-HIDDEN · ZOOM IN
+          </div>
+        )
       )}
     </div>
   );

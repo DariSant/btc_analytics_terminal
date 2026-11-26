@@ -134,7 +134,7 @@ def test_rest_endpoints_conform_to_schemas(tmp_path: Path) -> None:
         assert len(klines.candles) == 1
         assert len(klines.predicted_liquidations) == 1
 
-        overlays_res = client.get("/api/v1/overlays/history?since_ms=0&min_whale_usd=100000")
+        overlays_res = client.get("/api/v1/overlays/history?since_ms=0&min_whale_usd=250000")
         assert overlays_res.status_code == 200
         overlays = OverlaysHistoryResponse.model_validate(overlays_res.json())
         assert overlays.whales == [whale]

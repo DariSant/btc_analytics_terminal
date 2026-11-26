@@ -1,6 +1,13 @@
-import { X } from "lucide-react";
-import type { ReactNode } from "react";
+import { useState, type ReactNode } from "react";
+import { ArrowRight, X } from "lucide-react";
 import { useTerminalStore } from "../store/useTerminalStore";
+
+export type GuideSectionId =
+  | "orderflow"
+  | "liquidations"
+  | "vrvp"
+  | "options"
+  | "telemetry";
 
 interface LegendEntryProps {
   glyph: ReactNode;
@@ -12,7 +19,7 @@ interface LegendEntryProps {
 function LegendEntry({ glyph, title, tag, description }: LegendEntryProps) {
   return (
     <div
-      className="flex items-start gap-2.5 py-2"
+      className="flex items-start gap-2 py-2"
       style={{ borderTop: "1px solid var(--border-hairline)" }}
     >
       <div className="w-6 h-5 shrink-0 flex items-center justify-center mt-0.5">
@@ -46,9 +53,110 @@ function LegendEntry({ glyph, title, tag, description }: LegendEntryProps) {
   );
 }
 
+interface AccordionSectionProps {
+  id: GuideSectionId;
+  title: string;
+  railMode: boolean;
+  expanded: boolean;
+  onToggle: (id: GuideSectionId) => void;
+  onOpenGuide: (id: GuideSectionId) => void;
+  children: ReactNode;
+}
+
+function AccordionSection({
+  id,
+  title,
+  railMode,
+  expanded,
+  onToggle,
+  onOpenGuide,
+  children,
+}: AccordionSectionProps) {
+  return (
+    <section className="hairline-b">
+      <button
+        type="button"
+        aria-expanded={expanded}
+        onClick={() => (railMode ? onOpenGuide(id) : onToggle(id))}
+        className="w-full px-3 py-2 flex items-center justify-between gap-2 text-left cursor-pointer"
+        style={{
+          backgroundColor: expanded && !railMode ? "var(--bg-canvas)" : "transparent",
+          color: "var(--text-primary)",
+        }}
+      >
+        <span className="flex items-center gap-1.5 min-w-0">
+          <svg
+            width="8"
+            height="8"
+            viewBox="0 0 8 8"
+            aria-hidden="true"
+            className="shrink-0"
+          >
+            {expanded && !railMode ? (
+              <polygon points="1,2 7,2 4,6.5" fill="var(--accent-bull)" />
+            ) : (
+              <polygon points="2,1 6.5,4 2,7" fill="var(--text-muted)" />
+            )}
+          </svg>
+          <span className="text-[11px] font-semibold uppercase tracking-[0.04em] truncate">
+            {title}
+          </span>
+        </span>
+      </button>
+
+      {expanded && !railMode && (
+        <div className="px-3 pb-2">
+          {children}
+          <button
+            type="button"
+            onClick={() => onOpenGuide(id)}
+            className="mt-1 mb-1 w-full hairline-border px-2 py-1 rounded-[2px] flex items-center justify-between text-[10px] font-medium cursor-pointer"
+            style={{
+              backgroundColor: "var(--bg-canvas)",
+              color: "var(--accent-bull)",
+            }}
+          >
+            <span>READ PLAYBOOK</span>
+            <ArrowRight size={11} />
+          </button>
+        </div>
+      )}
+    </section>
+  );
+}
+
+const INITIAL_EXPANDED: Record<GuideSectionId, boolean> = {
+  orderflow: false,
+  liquidations: false,
+  vrvp: false,
+  options: false,
+  telemetry: false,
+};
+
 export function LegendDrawer() {
   const legendOpen = useTerminalStore((s) => s.legendOpen);
+  const guideOpen = useTerminalStore((s) => s.guideOpen);
   const setLegendOpen = useTerminalStore((s) => s.setLegendOpen);
+  const setGuideOpen = useTerminalStore((s) => s.setGuideOpen);
+
+  const [expanded, setExpanded] =
+    useState<Record<GuideSectionId, boolean>>(INITIAL_EXPANDED);
+
+  const toggleSection = (id: GuideSectionId) => {
+    setExpanded((prev) => ({ ...prev, [id]: !prev[id] }));
+  };
+
+  const openGuideSection = (id: GuideSectionId) => {
+    setGuideOpen(true);
+    if (typeof document !== "undefined") {
+      requestAnimationFrame(() => {
+        const el = document.getElementById(`guide-section-${id}`);
+        el?.scrollIntoView({ behavior: "auto", block: "start" });
+      });
+    }
+  };
+
+  const widthPx = !legendOpen ? 0 : guideOpen ? 160 : 260;
 
   return (
     <aside
@@ -59,30 +167,32 @@ export function LegendDrawer() {
           ? "terminal-drawer terminal-scroll flex flex-col justify-between select-none"
           : "terminal-drawer--closed"
       }
-      style={legendOpen ? { width: "260px" } : { width: "0px" }}
+      style={{ width: `${widthPx}px` }}
     >
       <div className="flex flex-col">
         {/* Pane Header */}
-        <div className="hairline-b px-3 py-2.5 flex items-center justify-between">
-          <div className="flex flex-col">
+        <div className="hairline-b px-3 py-2.5 flex items-center justify-between gap-1.5">
+          <div className="flex flex-col min-w-0">
             <h2
-              className="text-[11px] font-semibold uppercase tracking-[0.04em] m-0"
+              className="text-[11px] font-semibold uppercase tracking-[0.04em] m-0 truncate"
               style={{ color: "var(--text-primary)" }}
             >
-              Chart Legend
+              {guideOpen ? "Legend" : "Chart Legend"}
             </h2>
-            <span
-              className="font-mono-tabular text-[9px] tracking-[0.03em]"
-              style={{ color: "var(--text-muted)" }}
-            >
-              MARKS · HEATMAP · DERIVATIVES
-            </span>
+            {!guideOpen && (
+              <span
+                className="font-mono-tabular text-[9px] tracking-[0.03em]"
+                style={{ color: "var(--text-muted)" }}
+              >
+                CLICK SECTION TO EXPAND
+              </span>
+            )}
           </div>
           <button
             type="button"
             onClick={() => setLegendOpen(false)}
             aria-label="Close legend pane"
-            className="hairline-border flex items-center justify-center w-6 h-5 rounded-[2px] cursor-pointer"
+            className="hairline-border flex items-center justify-center w-6 h-5 rounded-[2px] cursor-pointer shrink-0"
             style={{
               backgroundColor: "var(--bg-canvas)",
               color: "var(--text-muted)",
@@ -92,19 +202,37 @@ export function LegendDrawer() {
           </button>
         </div>
 
-        {/* Section 1: Candle Marks (Round vs. Squared Diamond) */}
-        <section className="hairline-b px-3 pt-2.5 pb-1">
-          <h3
-            className="text-[11px] font-semibold uppercase tracking-[0.04em] mb-1.5"
-            style={{ color: "var(--text-muted)" }}
+        {/* Full Guide Trigger */}
+        <div className="hairline-b px-3 py-2">
+          <button
+            type="button"
+            onClick={() => setGuideOpen(!guideOpen)}
+            aria-label={guideOpen ? "Close full guide pane" : "Open full guide pane"}
+            aria-expanded={guideOpen}
+            className="w-full hairline-border px-2 py-1.5 rounded-[2px] flex items-center justify-between text-[11px] font-semibold uppercase tracking-[0.04em] cursor-pointer"
+            style={{
+              backgroundColor: guideOpen ? "var(--bg-canvas)" : "transparent",
+              color: guideOpen ? "var(--accent-bull)" : "var(--text-primary)",
+            }}
           >
-            Order Flow vs. Liquidations
-          </h3>
+            <span className="truncate">{guideOpen ? "Hide Guide" : "Full Guide"}</span>
+            <ArrowRight size={12} />
+          </button>
+        </div>
 
+        {/* Section 1: Whale Order Flow vs. Liquidations */}
+        <AccordionSection
+          id="orderflow"
+          title="Order Flow"
+          railMode={guideOpen}
+          expanded={expanded.orderflow}
+          onToggle={toggleSection}
+          onOpenGuide={openGuideSection}
+        >
           <LegendEntry
-            title="Round Circles — Whale Trades"
-            tag="$100k+"
-            description="Voluntary aggressive taker sweeps (100ms burst VWAP). Circle area scales with USD size. Teal = taker buy; Red = taker sell. Hover for exact print."
+            title="Round Circles — Whale Sweeps"
+            tag="$250k+"
+            description="Real 100ms WS burst sweeps only. Teal = aggressive taker buy; Red = aggressive taker sell. Solid ring (B) = Binance; dashed (Y) = Bybit."
             glyph={
               <svg width="20" height="20" viewBox="0 0 20 20" aria-hidden="true">
                 <circle
@@ -129,25 +257,34 @@ export function LegendDrawer() {
               </svg>
             }
           />
-
           <LegendEntry
-            title="Venue Ring: Solid vs. Dashed"
-            tag="B / Y"
-            description="Solid ring (B) = Binance Futures; dashed ring (Y) = Bybit V5. Venue glyphs appear inside bubbles >= 14px."
+            title="Fixed TF Escalation & Budget"
+            tag="AUTO"
+            description="Fixed floors: 1m $250k · 5m $500k · 15m $1M · 1h $2M · 4h $5M · 1d $10M. Nearby same-bar sweeps cluster (xN); viewport caps density by visible bars and auto-hides < 3.5px/bar."
             glyph={
               <span
                 className="font-mono-tabular text-[10px] font-semibold"
-                style={{ color: "var(--text-primary)" }}
+                style={{ color: "var(--accent-bull)" }}
               >
-                B · Y
+                xN
               </span>
             }
           />
+        </AccordionSection>
 
+        {/* Section 2: Liquidations */}
+        <AccordionSection
+          id="liquidations"
+          title="Liquidations"
+          railMode={guideOpen}
+          expanded={expanded.liquidations}
+          onToggle={toggleSection}
+          onOpenGuide={openGuideSection}
+        >
           <LegendEntry
             title="Diamond + X — Forced Liqs"
             tag="$25k+"
-            description="Hollow rotated-square markers show verified exchange liquidations (not voluntary trades). Red = longs wiped; Teal = shorts squeezed."
+            description="Hollow rotated squares mark verified forced liquidations (not voluntary whales). Red = longs wiped; Teal = shorts squeezed."
             glyph={
               <svg width="20" height="20" viewBox="0 0 20 20" aria-hidden="true">
                 <polygon
@@ -169,127 +306,79 @@ export function LegendDrawer() {
               </svg>
             }
           />
-        </section>
-
-        {/* Section 2: Left-Margin Liquidation Heatmap */}
-        <section className="hairline-b px-3 pt-2.5 pb-1">
-          <h3
-            className="text-[11px] font-semibold uppercase tracking-[0.04em] mb-1.5"
-            style={{ color: "var(--text-muted)" }}
-          >
-            Liquidation Heatmap
-          </h3>
-
           <LegendEntry
-            title="Left Thermal Bar"
-            tag="16px"
-            description="Continuous liquidation density across every price level (10x–100x OI-weighted swings). Auto-clears once price sweeps a level."
-            glyph={
-              <svg width="16" height="18" viewBox="0 0 16 18" aria-hidden="true">
-                <rect x="4" y="1" width="8" height="5" fill="var(--accent-bull)" fillOpacity="0.85" />
-                <rect x="4" y="6" width="8" height="4" fill="var(--accent-bull)" fillOpacity="0.25" />
-                <rect x="4" y="10" width="8" height="3" fill="var(--accent-bear)" fillOpacity="0.3" />
-                <rect x="4" y="13" width="8" height="4" fill="var(--accent-bear)" fillOpacity="0.9" />
-              </svg>
-            }
-          />
-
-          <LegendEntry
-            title="Peak Heat Plumes"
+            title="16px Left Thermal Bar & Plumes"
             tag="TOP 4"
-            description="Top 3–4 heaviest pockets project rightward from the left bar. Stronger opacity and longer reach indicate larger estimated liquidation pools."
+            description="Continuous left-margin density bar (10x–100x auto-mitigated pools). Top 3–4 heaviest pockets project rightward—stronger & longer = larger pool."
             glyph={
-              <svg width="20" height="14" viewBox="0 0 20 14" aria-hidden="true">
-                <rect x="1" y="2" width="18" height="4" fill="var(--accent-bear)" fillOpacity="0.7" />
-                <rect x="1" y="8" width="10" height="3" fill="var(--accent-bull)" fillOpacity="0.45" />
+              <svg width="20" height="16" viewBox="0 0 20 16" aria-hidden="true">
+                <rect x="1" y="1" width="5" height="14" fill="var(--accent-bear)" fillOpacity="0.7" />
+                <rect x="6" y="3" width="13" height="3.5" fill="var(--accent-bear)" fillOpacity="0.6" />
+                <rect x="6" y="10" width="8" height="2.5" fill="var(--accent-bull)" fillOpacity="0.45" />
               </svg>
             }
           />
-        </section>
+        </AccordionSection>
 
-        {/* Section 3: Volume & Profile */}
-        <section className="hairline-b px-3 pt-2.5 pb-1">
-          <h3
-            className="text-[11px] font-semibold uppercase tracking-[0.04em] mb-1.5"
-            style={{ color: "var(--text-muted)" }}
-          >
-            Volume Profile (VRVP)
-          </h3>
-
+        {/* Section 3: VRVP */}
+        <AccordionSection
+          id="vrvp"
+          title="Volume Profile"
+          railMode={guideOpen}
+          expanded={expanded.vrvp}
+          onToggle={toggleSection}
+          onOpenGuide={openGuideSection}
+        >
           <LegendEntry
-            title="80-Bin Visible Profile"
+            title="80-Bin VRVP & POC / VA"
             tag="70% VA"
-            description="Right-docked horizontal buy/sell volume across visible bars. Higher-contrast bars mark the 70% Value Area between VAH and VAL."
+            description="Right-docked buy/sell volume across visible bars. Brighter bins mark the 70% Value Area (VAH/VAL dashed); solid line = POC."
             glyph={
               <svg width="20" height="16" viewBox="0 0 20 16" aria-hidden="true">
                 <rect x="11" y="2" width="8" height="3" fill="var(--accent-bull)" fillOpacity="0.4" />
                 <rect x="4" y="6" width="15" height="4" fill="var(--accent-bear)" fillOpacity="0.65" />
-                <rect x="9" y="11" width="10" height="3" fill="var(--accent-bull)" fillOpacity="0.4" />
+                <line x1="1" y1="8" x2="19" y2="8" stroke="var(--text-primary)" strokeWidth="1.2" />
               </svg>
             }
           />
-
-          <LegendEntry
-            title="POC / VAH / VAL Rays"
-            tag="LINES"
-            description="Solid primary line = Point of Control (highest-volume price). Dashed neutral lines = Value Area High & Low."
-            glyph={
-              <svg width="20" height="14" viewBox="0 0 20 14" aria-hidden="true">
-                <line x1="1" y1="3" x2="19" y2="3" stroke="var(--accent-neutral)" strokeWidth="1" strokeDasharray="3 2" />
-                <line x1="1" y1="7" x2="19" y2="7" stroke="var(--text-primary)" strokeWidth="1.4" />
-                <line x1="1" y1="11" x2="19" y2="11" stroke="var(--accent-neutral)" strokeWidth="1" strokeDasharray="3 2" />
-              </svg>
-            }
-          />
-        </section>
+        </AccordionSection>
 
         {/* Section 4: Deribit Options */}
-        <section className="hairline-b px-3 pt-2.5 pb-1">
-          <h3
-            className="text-[11px] font-semibold uppercase tracking-[0.04em] mb-1.5"
-            style={{ color: "var(--text-muted)" }}
-          >
-            Options & Gamma (Deribit)
-          </h3>
-
+        <AccordionSection
+          id="options"
+          title="Options & GEX"
+          railMode={guideOpen}
+          expanded={expanded.options}
+          onToggle={toggleSection}
+          onOpenGuide={openGuideSection}
+        >
           <LegendEntry
-            title="Call Wall & Put Wall"
-            tag="OI"
-            description="Solid red ray = largest Call OI strike (overhead resistance). Solid teal ray = largest Put OI strike (downside support)."
+            title="Walls, GEX & Max Pain"
+            tag="DERIBIT"
+            description="Solid red = Call Wall; solid teal = Put Wall; dotted = Max Pain; left micro-bars = top-5 Net GEX strikes (+GEX dampens, -GEX accelerates)."
             glyph={
               <svg width="20" height="14" viewBox="0 0 20 14" aria-hidden="true">
-                <line x1="1" y1="4" x2="19" y2="4" stroke="var(--accent-bear)" strokeWidth="1.4" />
-                <line x1="1" y1="10" x2="19" y2="10" stroke="var(--accent-bull)" strokeWidth="1.4" />
+                <line x1="1" y1="3" x2="19" y2="3" stroke="var(--accent-bear)" strokeWidth="1.4" />
+                <line x1="1" y1="7" x2="19" y2="7" stroke="var(--accent-neutral)" strokeWidth="1.1" strokeDasharray="2 2" />
+                <line x1="1" y1="11" x2="19" y2="11" stroke="var(--accent-bull)" strokeWidth="1.4" />
               </svg>
             }
           />
-
-          <LegendEntry
-            title="GEX Bars & Max Pain"
-            tag="GEX"
-            description="Short left-edge bars show top-5 Net Gamma strikes (+GEX dampens volatility; -GEX amplifies moves). Dotted line = Max Pain strike."
-            glyph={
-              <svg width="20" height="14" viewBox="0 0 20 14" aria-hidden="true">
-                <rect x="1" y="2" width="10" height="2.5" fill="var(--accent-bull)" />
-                <rect x="1" y="6" width="14" height="2.5" fill="var(--accent-bear)" />
-                <line x1="1" y1="12" x2="19" y2="12" stroke="var(--accent-neutral)" strokeWidth="1.2" strokeDasharray="2 2" />
-              </svg>
-            }
-          />
-        </section>
+        </AccordionSection>
 
         {/* Section 5: Header Telemetry */}
-        <section className="px-3 pt-2.5 pb-3">
-          <h3
-            className="text-[11px] font-semibold uppercase tracking-[0.04em] mb-1.5"
-            style={{ color: "var(--text-muted)" }}
-          >
-            Header Telemetry
-          </h3>
+        <AccordionSection
+          id="telemetry"
+          title="Telemetry"
+          railMode={guideOpen}
+          expanded={expanded.telemetry}
+          onToggle={toggleSection}
+          onOpenGuide={openGuideSection}
+        >
           <LegendEntry
-            title="Session CVD & OI"
+            title="Session CVD, OI & Funding"
             tag="00:00 UTC"
-            description="Session CVD resets daily at 00:00 UTC and tracks net aggressive taker buy vs. sell USD flow. OI sums Binance + Bybit USD open interest."
+            description="Session CVD resets at 00:00 UTC and tracks net aggressive taker delta. OI combines Binance + Bybit USD open interest."
             glyph={
               <span
                 className="font-mono-tabular text-[10px] font-semibold"
@@ -299,7 +388,7 @@ export function LegendDrawer() {
               </span>
             }
           />
-        </section>
+        </AccordionSection>
       </div>
     </aside>
   );

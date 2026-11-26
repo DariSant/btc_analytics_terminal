@@ -68,6 +68,8 @@ describe("useTerminalStore & TerminalSyncController", () => {
       theme: "oled-dark",
       timeframe: "5m",
       drawerOpen: true,
+      legendOpen: false,
+      guideOpen: false,
       layers: {
         volume: true,
         vrvp: true,
@@ -77,7 +79,6 @@ describe("useTerminalStore & TerminalSyncController", () => {
         maxPain: true,
       },
       selectedExpiry: "ALL",
-      minWhaleUsd: 250000,
       wsStatus: "disconnected",
       candles: [],
       klinesRevision: 0,

@@ -23,7 +23,7 @@ class Settings(BaseSettings):
     BYBIT_REST_URL: str = "https://api.bybit.com"
     BYBIT_WS_URL: str = "wss://stream.bybit.com/v5/public/linear"
     DERIBIT_REST_URL: str = "https://www.deribit.com/api/v2"
-    WHALE_MIN_USD: float = 100_000.0
+    WHALE_MIN_USD: float = 250_000.0
     LIQ_MIN_USD: float = 25_000.0
     RETENTION_DAYS: int = 14
 

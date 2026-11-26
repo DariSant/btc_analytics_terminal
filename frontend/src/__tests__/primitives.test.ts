@@ -5,17 +5,17 @@ import {
   computeThermalDensityRows,
   selectTopPeakBands,
 } from "../primitives/LiquidationPrimitive";
-import { computeWhaleRadius } from "../primitives/WhaleBubblesPrimitive";
 import type { LiquidationBand } from "../types/terminal";
+import { computeScaledWhaleRadius } from "../utils/whaleEscalation";
 
 describe("Chart Primitive Quant & Geometry Helpers", () => {
-  it("clamps whale bubble radius in [4, 28] with area-proportional sqrt scaling", () => {
-    expect(computeWhaleRadius(100_000)).toBe(4);
-    expect(computeWhaleRadius(50_000)).toBe(4);
-    expect(computeWhaleRadius(5_000_000)).toBe(28);
-    expect(computeWhaleRadius(25_000_000)).toBe(28);
+  it("clamps whale bubble radius in [4, 28] relative to timeframe floor", () => {
+    expect(computeScaledWhaleRadius(250_000, 250_000)).toBe(4);
+    expect(computeScaledWhaleRadius(100_000, 250_000)).toBe(4);
+    expect(computeScaledWhaleRadius(5_000_000, 250_000)).toBe(28);
+    expect(computeScaledWhaleRadius(25_000_000, 250_000)).toBe(28);
 
-    const mid = computeWhaleRadius(1_325_000);
+    const mid = computeScaledWhaleRadius(1_437_500, 250_000);
     expect(mid).toBeCloseTo(16, 4);
   });
 

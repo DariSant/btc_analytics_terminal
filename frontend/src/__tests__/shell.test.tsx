@@ -1,11 +1,12 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { ControlDrawer } from "../components/ControlDrawer";
+import { GuideDrawer } from "../components/GuideDrawer";
 import { LegendDrawer } from "../components/LegendDrawer";
 import { TopTelemetryBar } from "../components/TopTelemetryBar";
 import { useTerminalStore } from "../store/useTerminalStore";
 
-describe("Phase 3 Institutional Shell", () => {
+describe("Phase 3 Institutional Shell & Collapsible Legend/Guide Panes", () => {
   beforeEach(() => {
     const backing = new Map<string, string>();
     const memoryStorage: Storage = {
@@ -33,6 +34,7 @@ describe("Phase 3 Institutional Shell", () => {
       timeframe: "5m",
       drawerOpen: true,
       legendOpen: false,
+      guideOpen: false,
       layers: {
         volume: true,
         vrvp: true,
@@ -42,7 +44,6 @@ describe("Phase 3 Institutional Shell", () => {
         maxPain: true,
       },
       selectedExpiry: "ALL",
-      minWhaleUsd: 250000,
       wsStatus: "connected",
       telemetry: {
         mark_price: 94240.5,
@@ -94,7 +95,7 @@ describe("Phase 3 Institutional Shell", () => {
     expect(document.documentElement.getAttribute("data-theme")).toBe("warm-off-white");
   });
 
-  it("renders 260px collapsible drawer, toggles layers/whale filter, and collapses cleanly", () => {
+  it("renders 260px collapsible drawer without Whale Filter UI and toggles layers/expiries", () => {
     const onSelectExpiry = vi.fn();
     render(
       <>
@@ -106,12 +107,10 @@ describe("Phase 3 Institutional Shell", () => {
     const drawer = screen.getByLabelText("Terminal Controls");
     expect(drawer.style.width).toBe("260px");
     expect(screen.getByText("+GEX Stabilizer")).toBeTruthy();
+    expect(screen.queryByRole("group", { name: "Whale Minimum USD" })).toBeNull();
 
     fireEvent.click(screen.getByRole("switch", { name: /VRVP/i }));
     expect(useTerminalStore.getState().layers.vrvp).toBe(false);
-
-    fireEvent.click(screen.getByRole("button", { name: "$1M" }));
-    expect(useTerminalStore.getState().minWhaleUsd).toBe(1000000);
 
     fireEvent.click(screen.getByRole("button", { name: /28NOV26/i }));
     expect(onSelectExpiry).toHaveBeenCalledWith("28NOV26");
@@ -120,28 +119,35 @@ describe("Phase 3 Institutional Shell", () => {
     expect(drawer.style.width).toBe("0px");
   });
 
-  it("keeps Legend pane hidden by default and toggles it open from the icon right of drawer toggle", () => {
+  it("keeps Legend sections collapsed by default, shrinks Legend to 160px rail, and collapses ControlDrawer when 3x Full Guide opens", () => {
     render(
       <>
         <TopTelemetryBar onSelectTimeframe={vi.fn()} />
         <ControlDrawer onSelectExpiry={vi.fn()} />
         <LegendDrawer />
+        <GuideDrawer />
       </>,
     );
 
+    const drawer = screen.getByLabelText("Terminal Controls");
     const legend = screen.getByLabelText("Chart Legend and Field Guide");
-    expect(legend.style.width).toBe("0px");
-    expect(useTerminalStore.getState().legendOpen).toBe(false);
+    const guide = screen.getByLabelText("Full Terminal Field Guide");
 
-    const toggleBtn = screen.getByRole("button", { name: /Expand legend pane/i });
-    fireEvent.click(toggleBtn);
-    expect(useTerminalStore.getState().legendOpen).toBe(true);
+    expect(legend.style.width).toBe("0px");
+    expect(guide.style.width).toBe("0px");
+
+    fireEvent.click(screen.getByRole("button", { name: /Expand legend pane/i }));
     expect(legend.style.width).toBe("260px");
-    expect(screen.getByText("Round Circles — Whale Trades")).toBeTruthy();
-    expect(screen.getByText("Diamond + X — Forced Liqs")).toBeTruthy();
+    expect(screen.queryByText("Round Circles — Whale Sweeps")).toBeNull();
 
-    fireEvent.click(screen.getByRole("button", { name: /Close legend pane/i }));
-    expect(useTerminalStore.getState().legendOpen).toBe(false);
-    expect(legend.style.width).toBe("0px");
+    fireEvent.click(screen.getByRole("button", { name: /^Order Flow$/i }));
+    expect(screen.getByText("Round Circles — Whale Sweeps")).toBeTruthy();
+
+    fireEvent.click(screen.getByRole("button", { name: /Open full guide pane/i }));
+    expect(useTerminalStore.getState().guideOpen).toBe(true);
+    expect(drawer.style.width).toBe("0px");
+    expect(legend.style.width).toBe("160px");
+    expect(guide.style.width).toBe("min(760px, 56vw)");
+    expect(screen.getByText("1. Whale Order Flow (Real 100ms Sweeps & Fixed Escalation)")).toBeTruthy();
   });
 });

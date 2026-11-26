@@ -119,6 +119,15 @@ body,
   overflow-x: hidden;
 }
 
+.terminal-guide {
+  flex-shrink: 0;
+  height: 100%;
+  border-left: 1px solid var(--border-hairline);
+  background-color: var(--bg-surface);
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+
 .terminal-drawer--closed {
   display: none;
   width: 0;

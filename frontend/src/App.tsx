@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef } from "react";
 import { ControlDrawer } from "./components/ControlDrawer";
+import { GuideDrawer } from "./components/GuideDrawer";
 import { LegendDrawer } from "./components/LegendDrawer";
 import { TopTelemetryBar } from "./components/TopTelemetryBar";
 import { UnifiedChart } from "./components/UnifiedChart";
@@ -40,6 +41,7 @@ export function App() {
     useTerminalStore.getState().setTimeframe(interval);
     wsRef.current?.setTimeframe(interval);
     void syncRef.current?.syncTimeframe(interval);
+    void syncRef.current?.syncOverlays(interval);
   }, []);
 
   const handleSelectExpiry = useCallback((expiry: string) => {
@@ -56,6 +58,7 @@ export function App() {
         </main>
         <ControlDrawer onSelectExpiry={handleSelectExpiry} />
         <LegendDrawer />
+        <GuideDrawer />
       </div>
     </div>
   );

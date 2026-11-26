@@ -6,6 +6,10 @@ import type {
   TimeframeLiteral,
 } from "../types/terminal";
 import { useTerminalStore } from "../store/useTerminalStore";
+import {
+  getFixedWhaleMinUsd,
+  getOverlayHistoryWindowMs,
+} from "../utils/whaleEscalation";
 
 function resolveApiBaseUrl(): string {
   const configured = import.meta.env.VITE_API_URL as string | undefined;
@@ -44,7 +48,7 @@ export function fetchKlines(
 
 export function fetchOverlaysHistory(
   sinceMs?: number,
-  minWhaleUsd: number = 100000,
+  minWhaleUsd: number = 250000,
   signal?: AbortSignal,
 ): Promise<OverlaysHistoryResponse> {
   const params = new URLSearchParams({
@@ -69,8 +73,10 @@ export function fetchOptions(
 
 export class TerminalSyncController {
   private klinesAbort: AbortController | null = null;
+  private overlaysAbort: AbortController | null = null;
   private bootstrapAbort: AbortController | null = null;
   private klinesSeq = 0;
+  private overlaysSeq = 0;
 
   async syncTimeframe(interval: TimeframeLiteral): Promise<void> {
     this.klinesAbort?.abort();
@@ -94,15 +100,43 @@ export class TerminalSyncController {
     }
   }
 
+  async syncOverlays(interval: TimeframeLiteral): Promise<void> {
+    this.overlaysAbort?.abort();
+    const controller = new AbortController();
+    this.overlaysAbort = controller;
+    const seq = ++this.overlaysSeq;
+
+    const fixedMin = getFixedWhaleMinUsd(interval);
+    const sinceMs = Date.now() - getOverlayHistoryWindowMs(interval);
+
+    try {
+      const res = await fetchOverlaysHistory(
+        sinceMs,
+        fixedMin,
+        controller.signal,
+      );
+      if (seq !== this.overlaysSeq || controller.signal.aborted) {
+        return;
+      }
+      useTerminalStore
+        .getState()
+        .applyOverlaysHistory(res.whales, res.liquidations);
+    } catch (err) {
+      if (isAbortError(err)) {
+        return;
+      }
+      throw err;
+    }
+  }
+
   async syncAll(interval: TimeframeLiteral, expiry: string): Promise<void> {
     this.bootstrapAbort?.abort();
     const controller = new AbortController();
     this.bootstrapAbort = controller;
 
-    const sinceMs = Date.now() - 24 * 60 * 60 * 1000;
-    const [, overlaysResult, optionsResult] = await Promise.allSettled([
+    const [, , optionsResult] = await Promise.allSettled([
       this.syncTimeframe(interval),
-      fetchOverlaysHistory(sinceMs, 100000, controller.signal),
+      this.syncOverlays(interval),
       fetchOptions(expiry, controller.signal),
     ]);
 
@@ -110,15 +144,8 @@ export class TerminalSyncController {
       return;
     }
 
-    const store = useTerminalStore.getState();
-    if (overlaysResult.status === "fulfilled") {
-      store.applyOverlaysHistory(
-        overlaysResult.value.whales,
-        overlaysResult.value.liquidations,
-      );
-    }
     if (optionsResult.status === "fulfilled") {
-      store.applyOptionsResponse(optionsResult.value);
+      useTerminalStore.getState().applyOptionsResponse(optionsResult.value);
     }
   }
 
@@ -129,8 +156,10 @@ export class TerminalSyncController {
 
   dispose(): void {
     this.klinesAbort?.abort();
+    this.overlaysAbort?.abort();
     this.bootstrapAbort?.abort();
     this.klinesAbort = null;
+    this.overlaysAbort = null;
     this.bootstrapAbort = null;
   }
 }
